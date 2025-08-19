@@ -206,7 +206,7 @@ export function DrillCanvas({
         canvasRef.current = node
         drop(node)
       }}
-      className={`relative w-full h-full bg-[url('/field_drag.png')] bg-cover bg-center rounded-lg overflow-hidden cursor-crosshair ${
+      className={`relative w-full h-full bg-[url('/field_drag.png')] bg-[length:100%_100%] bg-center bg-no-repeat rounded-lg overflow-hidden cursor-crosshair ${
         isOver ? "ring-2 ring-yellow-400" : ""
       }`}
       onMouseDown={handleMouseDown}
