@@ -206,26 +206,14 @@ export function DrillCanvas({
         canvasRef.current = node
         drop(node)
       }}
-      className={`relative w-full h-full bg-gradient-to-br from-blue-600 to-blue-700 rounded-lg overflow-hidden cursor-crosshair ${
+      className={`relative w-full h-full bg-[url('/field_drag.png')] bg-cover bg-center rounded-lg overflow-hidden cursor-crosshair ${
         isOver ? "ring-2 ring-yellow-400" : ""
       }`}
       onMouseDown={handleMouseDown}
       onKeyDown={handleKeyDown}
       tabIndex={0}
     >
-      <svg className="absolute inset-0 w-full h-full" viewBox="0 0 800 600" preserveAspectRatio="none">
-        <rect x="50" y="50" width="700" height="500" fill="none" stroke="white" strokeWidth="3" />
-        <line x1="400" y1="50" x2="400" y2="550" stroke="white" strokeWidth="2" />
-        <circle cx="400" cy="300" r="80" fill="none" stroke="white" strokeWidth="2" />
-        <rect x="50" y="200" width="100" height="200" fill="none" stroke="white" strokeWidth="2" />
-        <rect x="650" y="200" width="100" height="200" fill="none" stroke="white" strokeWidth="2" />
-        <rect x="50" y="150" width="150" height="300" fill="none" stroke="white" strokeWidth="2" />
-        <rect x="600" y="150" width="150" height="300" fill="none" stroke="white" strokeWidth="2" />
-        <circle cx="200" cy="300" r="60" fill="none" stroke="white" strokeWidth="2" strokeDasharray="10,5" />
-        <circle cx="600" cy="300" r="60" fill="none" stroke="white" strokeWidth="2" strokeDasharray="10,5" />
-        <rect x="30" y="275" width="20" height="50" fill="none" stroke="white" strokeWidth="2" />
-        <rect x="750" y="275" width="20" height="50" fill="none" stroke="white" strokeWidth="2" />
-      </svg>
+      
 
       {selectionRect && (
         <div
@@ -256,14 +244,14 @@ export function DrillCanvas({
         />
       ))}
 
-      {elements.length === 0 && !isOver && (
+      {/* {elements.length === 0 && !isOver && (
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="text-white/60 text-center">
             <p className="text-lg font-medium mb-2">Drag elements from the toolbox</p>
             <p className="text-sm">Click and drag to select multiple • Ctrl+Click to toggle selection</p>
           </div>
         </div>
-      )}
+      )} */}
 
       {selectedElements.length > 1 && (
         <div className="absolute top-4 left-4 bg-yellow-400 text-yellow-900 px-3 py-1 rounded-lg text-sm font-medium">
