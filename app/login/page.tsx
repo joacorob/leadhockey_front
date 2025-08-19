@@ -3,6 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { signIn } from "next-auth/react"
 import { AuthLayout } from "@/components/layout/auth-layout"
 import { AuthForm } from "@/components/forms/auth-form"
 import { SocialAuth } from "@/components/forms/social-auth"
@@ -14,11 +15,22 @@ export default function LoginPage() {
   const handleLogin = async (formData: any) => {
     setIsLoading(true)
 
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false)
-      router.push("/dashboard")
-    }, 2000)
+    const result = await signIn("credentials", {
+      email: formData.email,
+      password: formData.password,
+      rememberMe: String(formData.rememberMe),
+      redirect: false
+    })
+
+    setIsLoading(false)
+
+    if (result?.error) {
+      // TODO: show toast or error message
+      console.error(result.error)
+      return
+    }
+
+    router.push("/dashboard")
   }
 
   return (
