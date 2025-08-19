@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
+import { getToken } from "next-auth/jwt"
 
 const mockVideos = [
   {
@@ -118,11 +119,15 @@ export async function GET(request: NextRequest) {
     const page = Number.parseInt(searchParams.get("page") || "1")
     const limit = Number.parseInt(searchParams.get("limit") || "9")
 
+    const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET })
+    const accessToken = (token as any)?.accessToken as string | undefined
+
     // Try to fetch from external API first
     try {
       const externalResponse = await fetch(`${process.env.LEAD_BACKEND}/api/v1/videos`, {
         headers: {
           accept: "application/json",
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
         },
       })
 

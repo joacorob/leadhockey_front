@@ -27,15 +27,22 @@ interface Video {
   description: string
   thumbnail_url: string
   video_url: string
-  duration: number
+  duration: string
   category_id: string
-  category?: string
+  category: string
   coach: string
   tags: string[]
   created_at: string
   updated_at: string
   views: number
   likes: number
+  thumbnail: string
+  isEliminating?: boolean
+}
+
+interface ApiResponse<T> {
+  success: boolean
+  data: T
 }
 
 export default function WatchPage() {
@@ -43,10 +50,10 @@ export default function WatchPage() {
   const [selectedCategory, setSelectedCategory] = useState("all")
   const [filteredVideos, setFilteredVideos] = useState<Video[]>([])
 
-  const { data: categoriesData, loading: categoriesLoading } = useApi<Category[]>("/categories")
+  const { data: categoriesResponse, loading: categoriesLoading } = useApi<ApiResponse<Category[]>>("/categories")
   const { data: videosData, loading: videosLoading } = useApi<Video[]>("/v1/videos")
 
-  const categories = Array.isArray(categoriesData) ? categoriesData : []
+  const categories = Array.isArray(categoriesResponse?.data) ? categoriesResponse.data : []
   const videos = Array.isArray(videosData) ? videosData : []
 
   useEffect(() => {
@@ -89,7 +96,21 @@ export default function WatchPage() {
       }
     }
 
-    setFilteredVideos(filtered)
+    // Map API video format to UI expected format
+    const mappedVideos = filtered.map((video) => ({
+      ...video,
+      thumbnail: (video as any).thumbnail || (video as any).thumbnail_url || "/placeholder.svg",
+      duration: typeof video.duration === "number" ? formatDuration(video.duration) : video.duration,
+      category: (video as any).category || (categories.find((cat) => cat.id === video.category_id)?.name ?? "Unknown"),
+    }))
+
+    setFilteredVideos(mappedVideos as Video[])
+  }
+
+  const formatDuration = (seconds: number) => {
+    const mins = Math.floor(seconds / 60)
+    const secs = seconds % 60
+    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`
   }
 
   const handleVideoClick = (video: Video) => {

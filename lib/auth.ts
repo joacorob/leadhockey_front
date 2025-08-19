@@ -19,6 +19,8 @@ interface BackendLoginResponse {
 }
 
 export const authOptions: NextAuthOptions = {
+  // Use the same secret across sign-in and API routes so that getToken() can properly decode the JWT
+  secret: process.env.NEXTAUTH_SECRET,
   providers: [
     CredentialsProvider({
       name: "Credentials",
