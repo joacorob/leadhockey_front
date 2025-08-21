@@ -51,10 +51,16 @@ export default function WatchPage() {
   const [filteredVideos, setFilteredVideos] = useState<Video[]>([])
 
   const { data: categoriesResponse, loading: categoriesLoading } = useApi<ApiResponse<Category[]>>("/categories")
-  const { data: videosData, loading: videosLoading } = useApi<Video[]>("/v1/videos")
+  interface VideosApiResponse {
+    items: any[]
+    page: number
+    totalPages: number
+  }
+
+  const { data: videosResponse, loading: videosLoading } = useApi<VideosApiResponse>("/v1/videos")
 
   const categories = Array.isArray(categoriesResponse?.data) ? categoriesResponse.data : []
-  const videos = Array.isArray(videosData) ? videosData : []
+  const videos = Array.isArray(videosResponse?.items) ? videosResponse.items : []
 
   useEffect(() => {
     if (videos.length > 0) {
@@ -85,7 +91,7 @@ export default function WatchPage() {
         (video) =>
           video.title.toLowerCase().includes(search.toLowerCase()) ||
           video.coach.toLowerCase().includes(search.toLowerCase()) ||
-          video.tags.some((tag) => tag.toLowerCase().includes(search.toLowerCase())),
+          video.tags.some((tag: string) => tag.toLowerCase().includes(search.toLowerCase())),
       )
     }
 
@@ -100,8 +106,11 @@ export default function WatchPage() {
     const mappedVideos = filtered.map((video) => ({
       ...video,
       thumbnail: (video as any).thumbnail || (video as any).thumbnail_url || "/placeholder.svg",
-      duration: typeof video.duration === "number" ? formatDuration(video.duration) : video.duration,
-      category: (video as any).category || (categories.find((cat) => cat.id === video.category_id)?.name ?? "Unknown"),
+      duration: typeof (video as any).duration === "number" ? formatDuration((video as any).duration) : (video as any).duration,
+      video_url: (video as any).video_url || (video as any).videoUrl,
+      category_id: (video as any).category_id || (video as any).category,
+      category: categories.find((cat) => cat.id === ((video as any).category_id || (video as any).category))?.name ?? "Unknown",
+      coach: typeof (video as any).coach === "string" ? (video as any).coach : (video as any).coach?.name ?? "Unknown",
     }))
 
     setFilteredVideos(mappedVideos as Video[])
