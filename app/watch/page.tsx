@@ -57,13 +57,17 @@ export default function WatchPage() {
     totalPages: number
   }
 
-  const { data: videosResponse, loading: videosLoading } = useApi<VideosApiResponse>("/v1/videos")
+  const { data: videosResponse, loading: videosLoading } = useApi<VideosApiResponse>("/videos")
 
   // Extract categories from the nested API response structure
   const categories = Array.isArray((categoriesResponse as any)?.data?.data?.items)
     ? ((categoriesResponse as any).data.data.items as Category[])
     : []
-  const videos = Array.isArray(videosResponse?.items) ? videosResponse.items : []
+
+    const videos = Array.isArray((videosResponse as any)?.data?.data?.items)
+    ? ((videosResponse as any).data.data.items as Video[])
+    : []
+
 
   useEffect(() => {
     if (videos.length > 0) {
