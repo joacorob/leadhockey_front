@@ -63,7 +63,7 @@ export async function GET(request: NextRequest) {
 
     // Try to fetch from external API first
     try {
-      const externalResponse = await fetch(`${process.env.LEAD_BACKEND}/api/categories`, {
+      const externalResponse = await fetch(`${process.env.LEAD_BACKEND}/api/v1/categories`, {
         headers: {
           accept: "application/json",
           Authorization: `Bearer ${accessToken}`,

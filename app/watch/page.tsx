@@ -59,7 +59,10 @@ export default function WatchPage() {
 
   const { data: videosResponse, loading: videosLoading } = useApi<VideosApiResponse>("/v1/videos")
 
-  const categories = Array.isArray(categoriesResponse?.data) ? categoriesResponse.data : []
+  // Extract categories from the nested API response structure
+  const categories = Array.isArray((categoriesResponse as any)?.data?.data?.items)
+    ? ((categoriesResponse as any).data.data.items as Category[])
+    : []
   const videos = Array.isArray(videosResponse?.items) ? videosResponse.items : []
 
   useEffect(() => {
@@ -67,6 +70,7 @@ export default function WatchPage() {
       filterVideos(searchTerm, selectedCategory)
     }
   }, [videos, searchTerm, selectedCategory])
+
 
   const handleSearch = (term: string) => {
     setSearchTerm(term)
