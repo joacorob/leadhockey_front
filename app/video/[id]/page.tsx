@@ -1,7 +1,7 @@
 "use client"
 
 import { Suspense } from "react"
-import { useParams, useSearchParams } from "next/navigation"
+import { useParams } from "next/navigation"
 import { Sidebar } from "@/components/layout/sidebar"
 import { Header } from "@/components/layout/header"
 import { VideoPlayer } from "@/components/video/video-player"
@@ -10,57 +10,47 @@ import { VideoDocuments } from "@/components/video/video-documents"
 import { VideoComments } from "@/components/video/video-comments"
 import { RelatedVideos } from "@/components/video/related-videos"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useApi } from "@/lib/hooks/use-api"
 
 function VideoViewContent() {
   const params = useParams()
-  const searchParams = useSearchParams()
   const videoId = params.id as string
 
-  // Mock video data - in real app this would come from API
-  const videoData = {
-    id: videoId,
-    title: "Advanced Stick Handling Techniques",
-    description: "Master the art of stick handling with these professional techniques used by elite players. This comprehensive training session covers advanced moves, body positioning, and game-situation applications that will elevate your puck control to the next level.",
-    videoUrl: "https://leadhockey.ams3.digitaloceanspaces.com/sessions/videos/1751913879336-Skills%2018.mp4",
-    duration: "12:45",
-    views: 2847,
-    likes: 156,
-    uploadDate: "2 days ago",
-    category: "Skills Training",
-    tags: ["stick handling", "technique", "advanced", "puck control"],
-    owner: {
-      name: "Coach Sarah Williams",
-      avatar: "/female-hockey-coach-headshot.png",
-      bio: "Former Olympic gold medalist with 15+ years of coaching experience",
-      credentials: "Level 4 Certified Coach, Olympic Champion 2018",
-      totalVideos: 127,
-      followers: 15420
-    }
-  }
+  // Fetch video data using useApi hook
+  const { data: apiResponse, loading, error } = useApi(`/videos/${videoId}`)
+  const videoData = (apiResponse as any)?.data ?? apiResponse
 
-  const documents = [
-    {
-      id: "1",
-      name: "Stick Handling Drill Guide",
-      type: "PDF",
-      size: "2.4 MB",
-      description: "Complete guide with 15 progressive stick handling drills"
-    },
-    {
-      id: "2", 
-      name: "Training Schedule Template",
-      type: "PDF",
-      size: "1.1 MB",
-      description: "Weekly training schedule for skill development"
-    },
-    {
-      id: "3",
-      name: "Equipment Checklist",
-      type: "PDF", 
-      size: "0.8 MB",
-      description: "Essential equipment for stick handling practice"
-    }
-  ]
+  // Map API response to UI shape expected by VideoInfo component
+  const mappedVideo = videoData
+    ? {
+        id: videoData.id,
+        title: videoData.title,
+        description: videoData.description,
+        videoUrl: videoData.videoUrl,
+        duration: videoData.duration,
+        views: videoData.views ?? 0,
+        likes: videoData.likes ?? 0,
+        uploadDate: videoData.createdAt ?? videoData.updatedAt ?? new Date().toISOString(),
+        category: "Training", // Placeholder – you may map categoryId -> name
+        tags: videoData.tags ?? [],
+        owner: {
+          name: "Uploader", // API does not provide owner details yet
+          avatar: "/placeholder-user.jpg",
+          bio: "",
+          credentials: "",
+        },
+      }
+    : null
+
+  const isDataReady = !loading && !error && !!mappedVideo
+
+  const documents = (videoData?.pdfs ?? []).map((pdf: any) => ({
+    id: String(pdf.id),
+    name: pdf.name,
+    type: "PDF",
+    size: pdf.size ? `${(pdf.size / (1024 * 1024)).toFixed(1)} MB` : "",
+    description: "Training resource",
+  }))
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -78,12 +68,21 @@ function VideoViewContent() {
               {/* Main Content */}
               <div className="flex-1 space-y-4 lg:space-y-6">
                 {/* Video Player */}
-                <div className="bg-black rounded-lg overflow-hidden">
-                  <VideoPlayer videoUrl={videoData.videoUrl} />
-                </div>
+                {loading ? (
+                  <div className="flex justify-center items-center h-64 bg-gray-200 rounded-lg">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+                  </div>
+                ) : error || !mappedVideo ? (
+                  <p className="text-center text-red-600">Failed to load video.</p>
+                ) : (
+                  <div className="bg-black rounded-lg overflow-hidden">
+                    <VideoPlayer videoUrl={mappedVideo.videoUrl} />
+                  </div>
+                )
+                }
                 
                 {/* Video Info */}
-                <VideoInfo video={videoData} />
+                {mappedVideo && <VideoInfo video={mappedVideo} />}
                 
                 {/* Mobile Tabs */}
                 <div className="lg:hidden">
