@@ -17,11 +17,7 @@ export async function GET(
       },
     })
 
-    console.log(JSON.stringify(externalResponse, null, 2))
-
     const data = await externalResponse.json()
-
-    console.log(JSON.stringify(data, null, 2))
 
     // real example data:
   //   {
