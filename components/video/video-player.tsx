@@ -1,245 +1,149 @@
-"use client"
+"use client";
 
-import { useState, useRef, useEffect } from "react"
-import { Play, Pause, Volume2, VolumeX, Maximize, SkipBack, SkipForward } from 'lucide-react'
-import { Button } from "@/components/ui/button"
-import { Slider } from "@/components/ui/slider"
+import { useEffect, useRef } from "react";
+import videojs from "video.js";
+import "video.js/dist/video-js.css";
 
-interface VideoPlayerProps {
-  videoUrl: string
+type VideoJsPlayer = any;
+
+interface Subtitle {
+  url: string;
+  label: string;
+  language: string;
+  /** Optional: format to hint MIME type */
+  format?: "vtt" | "srt";
 }
 
-export function VideoPlayer({ videoUrl }: VideoPlayerProps) {
-  const videoRef = useRef<HTMLVideoElement>(null)
-  const [isPlaying, setIsPlaying] = useState(false)
-  const [currentTime, setCurrentTime] = useState(0)
-  const [duration, setDuration] = useState(0)
-  const [volume, setVolume] = useState(1)
-  const [isMuted, setIsMuted] = useState(false)
-  const [playbackRate, setPlaybackRate] = useState(1)
-  const [showControls, setShowControls] = useState(true)
+interface VideoPlayerProps {
+  /** Video source URL */
+  videoUrl: string;
+  /** Preview image */
+  poster?: string;
+  /** Autoplay on load */
+  autoplay?: boolean;
+  /** Show default Video.js controls */
+  controls?: boolean;
+  /** Enable fluid (responsive) layout */
+  fluid?: boolean;
+  /** Extra Video.js options */
+  options?: Record<string, unknown>;
+  /** Subtitle tracks */
+  subtitles?: Subtitle[];
+}
 
+export function VideoPlayer({
+  videoUrl,
+  poster,
+  autoplay = false,
+  controls = true,
+  fluid = true,
+  options = {},
+  subtitles = [],
+}: VideoPlayerProps) {
+  const wrapperRef = useRef<HTMLDivElement | null>(null);
+  const playerRef = useRef<VideoJsPlayer | null>(null);
+
+  // Helper to infer MIME type from url
+  const inferMimeType = (url: string): string | undefined => {
+    const ext = url.split(".").pop()?.toLowerCase();
+    switch (ext) {
+      case "mp4":
+        return "video/mp4";
+      case "m4v":
+        return "video/x-m4v";
+      case "webm":
+        return "video/webm";
+      default:
+        return undefined;
+    }
+  };
+
+  // Initialise player once
   useEffect(() => {
-    const video = videoRef.current
-    if (!video) return
+    if (!playerRef.current && wrapperRef.current) {
+      const videoEl = document.createElement("video-js");
+      videoEl.classList.add(
+        "vjs-big-play-centered",
+        "w-full",
+        "h-full",
+        "rounded-lg",
+        "overflow-hidden"
+      );
 
-    const updateTime = () => setCurrentTime(video.currentTime)
-    const updateDuration = () => setDuration(video.duration)
+      wrapperRef.current.appendChild(videoEl);
 
-    video.addEventListener('timeupdate', updateTime)
-    video.addEventListener('loadedmetadata', updateDuration)
-    video.addEventListener('ended', () => setIsPlaying(false))
+      playerRef.current = videojs(videoEl, {
+        autoplay,
+        controls,
+        fluid,
+        poster,
+        preload: "auto",
+        sources: [{ src: videoUrl, type: inferMimeType(videoUrl) }],
+        ...options,
+      });
 
+      const vjs = playerRef.current as VideoJsPlayer;
+      subtitles.forEach((track, idx) => {
+        vjs.addRemoteTextTrack(
+          {
+            kind: "subtitles",
+            src: track.url,
+            srclang: track.language,
+            label: track.label,
+            default: idx === 0,
+            type: track.format === "srt" ? "application/x-subrip" : "text/vtt",
+          },
+          false
+        );
+      });
+    }
+  }, [autoplay, controls, fluid, poster, options, videoUrl, subtitles]);
+
+  // Update source if videoUrl changes
+  useEffect(() => {
+    const player = playerRef.current as VideoJsPlayer;
+    if (player) {
+      player.src({ src: videoUrl });
+      if (autoplay) player.play();
+    }
+  }, [videoUrl, autoplay]);
+
+  // Update subtitles when prop changes
+  useEffect(() => {
+    const vjs = playerRef.current as VideoJsPlayer;
+    if (vjs) {
+      const existing = vjs.remoteTextTracks?.();
+      if (existing) {
+        for (let i = existing.length - 1; i >= 0; i--) {
+          vjs.removeRemoteTextTrack(existing[i]);
+        }
+      }
+      subtitles.forEach((track, idx) => {
+        vjs.addRemoteTextTrack(
+          {
+            kind: "subtitles",
+            src: track.url,
+            srclang: track.language,
+            label: track.label,
+            default: idx === 0,
+            type: track.format === "srt" ? "application/x-subrip" : "text/vtt",
+          },
+          false
+        );
+      });
+    }
+  }, [subtitles]);
+
+  // Dispose player on unmount
+  useEffect(() => {
+    const player = playerRef.current as VideoJsPlayer;
     return () => {
-      video.removeEventListener('timeupdate', updateTime)
-      video.removeEventListener('loadedmetadata', updateDuration)
-      video.removeEventListener('ended', () => setIsPlaying(false))
-    }
-  }, [])
+      if (player && !player.isDisposed?.()) {
+        player.dispose();
+        playerRef.current = null;
+      }
+    };
+  }, []);
 
-  const togglePlay = () => {
-    const video = videoRef.current
-    if (!video) return
-
-    if (isPlaying) {
-      video.pause()
-    } else {
-      video.play()
-    }
-    setIsPlaying(!isPlaying)
-  }
-
-  const handleSeek = (value: number[]) => {
-    const video = videoRef.current
-    if (!video) return
-
-    const newTime = (value[0] / 100) * duration
-    video.currentTime = newTime
-    setCurrentTime(newTime)
-  }
-
-  const handleVolumeChange = (value: number[]) => {
-    const video = videoRef.current
-    if (!video) return
-
-    const newVolume = value[0] / 100
-    video.volume = newVolume
-    setVolume(newVolume)
-    setIsMuted(newVolume === 0)
-  }
-
-  const toggleMute = () => {
-    const video = videoRef.current
-    if (!video) return
-
-    if (isMuted) {
-      video.volume = volume
-      setIsMuted(false)
-    } else {
-      video.volume = 0
-      setIsMuted(true)
-    }
-  }
-
-  const skip = (seconds: number) => {
-    const video = videoRef.current
-    if (!video) return
-
-    video.currentTime = Math.max(0, Math.min(duration, video.currentTime + seconds))
-  }
-
-  const toggleFullscreen = () => {
-    const video = videoRef.current
-    if (!video) return
-
-    if (document.fullscreenElement) {
-      document.exitFullscreen()
-    } else {
-      video.requestFullscreen()
-    }
-  }
-
-  const changePlaybackRate = (rate: number) => {
-    const video = videoRef.current
-    if (!video) return
-
-    video.playbackRate = rate
-    setPlaybackRate(rate)
-  }
-
-  const formatTime = (time: number) => {
-    const minutes = Math.floor(time / 60)
-    const seconds = Math.floor(time % 60)
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`
-  }
-
-  return (
-    <div 
-      className="relative bg-black rounded-lg overflow-hidden group"
-      onMouseEnter={() => setShowControls(true)}
-      onMouseLeave={() => setShowControls(false)}
-    >
-      {/* Video Element */}
-      <video
-        ref={videoRef}
-        src={videoUrl}
-        className="w-full aspect-video"
-        onClick={togglePlay}
-        crossOrigin="anonymous"
-      />
-
-      {/* Controls Overlay */}
-      <div className={`absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent transition-opacity duration-300 ${showControls ? 'opacity-100' : 'opacity-0'}`}>
-        {/* Play/Pause Button (Center) */}
-        {!isPlaying && (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <Button
-              onClick={togglePlay}
-              size="lg"
-              className="w-16 h-16 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm"
-            >
-              <Play className="w-8 h-8 text-white ml-1" />
-            </Button>
-          </div>
-        )}
-
-        {/* Bottom Controls */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 space-y-2">
-          {/* Progress Bar */}
-          <Slider
-            value={[duration ? (currentTime / duration) * 100 : 0]}
-            onValueChange={handleSeek}
-            max={100}
-            step={0.1}
-            className="w-full"
-          />
-
-          {/* Control Buttons */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              {/* Play/Pause */}
-              <Button
-                onClick={togglePlay}
-                size="sm"
-                variant="ghost"
-                className="text-white hover:bg-white/20"
-              >
-                {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-              </Button>
-
-              {/* Skip Buttons */}
-              <Button
-                onClick={() => skip(-10)}
-                size="sm"
-                variant="ghost"
-                className="text-white hover:bg-white/20"
-              >
-                <SkipBack className="w-4 h-4" />
-              </Button>
-
-              <Button
-                onClick={() => skip(10)}
-                size="sm"
-                variant="ghost"
-                className="text-white hover:bg-white/20"
-              >
-                <SkipForward className="w-4 h-4" />
-              </Button>
-
-              {/* Volume */}
-              <div className="flex items-center space-x-2">
-                <Button
-                  onClick={toggleMute}
-                  size="sm"
-                  variant="ghost"
-                  className="text-white hover:bg-white/20"
-                >
-                  {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-                </Button>
-                <div className="w-20">
-                  <Slider
-                    value={[isMuted ? 0 : volume * 100]}
-                    onValueChange={handleVolumeChange}
-                    max={100}
-                    step={1}
-                  />
-                </div>
-              </div>
-
-              {/* Time Display */}
-              <span className="text-white text-sm">
-                {formatTime(currentTime)} / {formatTime(duration)}
-              </span>
-            </div>
-
-            <div className="flex items-center space-x-2">
-              {/* Playback Speed */}
-              <select
-                value={playbackRate}
-                onChange={(e) => changePlaybackRate(Number(e.target.value))}
-                className="bg-white/20 text-white text-sm rounded px-2 py-1 border-none outline-none"
-              >
-                <option value={0.5}>0.5x</option>
-                <option value={0.75}>0.75x</option>
-                <option value={1}>1x</option>
-                <option value={1.25}>1.25x</option>
-                <option value={1.5}>1.5x</option>
-                <option value={2}>2x</option>
-              </select>
-
-              {/* Fullscreen */}
-              <Button
-                onClick={toggleFullscreen}
-                size="sm"
-                variant="ghost"
-                className="text-white hover:bg-white/20"
-              >
-                <Maximize className="w-4 h-4" />
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
+  return <div data-vjs-player ref={wrapperRef} className="w-full h-full" />;
 }
