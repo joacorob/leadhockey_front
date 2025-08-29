@@ -1,35 +1,40 @@
 import { NextRequest } from "next/server";
 
-// Proxy for subtitle files (VTT/SRT) to bypass CORS restrictions.
-// Usage: /api/subtitle-proxy?url=<encoded-remote-url>
 export async function GET(req: NextRequest) {
-  const remoteUrl = req.nextUrl.searchParams.get("url");
-  if (!remoteUrl) {
-    return new Response("Missing 'url' query parameter", { status: 400 });
+  const url = req.nextUrl.searchParams.get("url");
+  const fmtParam = req.nextUrl.searchParams.get("format");
+  if (!url) return new Response("Missing 'url'", { status: 400 });
+
+  const ext = url.split(".").pop()?.toLowerCase();
+  const format = fmtParam ?? (ext === "srt" ? "srt" : "vtt");
+
+  const remoteRes = await fetch(url);
+  if (!remoteRes.ok) {
+    return new Response("Failed to fetch subtitle", { status: 502 });
   }
 
-  // Fetch remote subtitle (simple GET; Range not necessary but could be forwarded)
-  const remoteRes = await fetch(remoteUrl);
+  let body: BodyInit;
+  let mime = "text/vtt; charset=utf-8";
 
-  // Prepare response headers
-  const headers = new Headers();
-  const remoteCT = remoteRes.headers.get("Content-Type");
-  if (remoteCT) headers.set("Content-Type", remoteCT);
-
-  // If remote didn't send a specific Content-Type or sent octet-stream, infer from extension
-  if (!remoteCT || remoteCT === "application/octet-stream") {
-    const ext = remoteUrl.split(".").pop()?.toLowerCase();
-    const mime = ext === "vtt" ? "text/vtt" : ext === "srt" ? "application/x-subrip" : undefined;
-    if (mime) headers.set("Content-Type", mime);
+  if (format === "srt") {
+    const srtText = await remoteRes.text();
+    const vttBody =
+      "WEBVTT\n\n" +
+      srtText
+        .replace(/\r+/g, "")
+        .split(/\n\n+/)
+        .map((block) => block.trim().replace(/(\d{2}:\d{2}:\d{2}),(\d{3})/g, "$1.$2"))
+        .join("\n\n");
+    body = vttBody;
+  } else {
+    body = remoteRes.body as any;
   }
 
-  // Cache for 1 day (adjust as needed)
-  headers.set("Cache-Control", "public, max-age=86400");
-  // Allow CORS for all origins (restrict in production if desired)
-  headers.set("Access-Control-Allow-Origin", "*");
-
-  return new Response(remoteRes.body, {
-    status: remoteRes.status,
-    headers,
+  const headers = new Headers({
+    "Content-Type": mime,
+    "Cache-Control": "public, max-age=86400, immutable",
+    "Access-Control-Allow-Origin": "*",
   });
+
+  return new Response(body, { status: 200, headers });
 }
