@@ -53,6 +53,13 @@ function VideoViewContent() {
     url: pdf.url ?? pdf.link ?? pdf.path ?? `/${pdf.id}.pdf`,
   }))
 
+  const subtitles = (videoData?.subtitles ?? []).map((sub: any) => ({
+    url: `/api/subtitle-proxy?url=${encodeURIComponent(sub.url)}`,
+    label: sub.label ?? sub.language,
+    language: sub.language,
+    format: sub.format,
+  }))
+
   return (
     <div className="flex h-screen bg-gray-50">
       {/* Desktop Sidebar */}
@@ -77,7 +84,7 @@ function VideoViewContent() {
                   <p className="text-center text-red-600">Failed to load video.</p>
                 ) : (
                   <div className="bg-black rounded-lg overflow-hidden">
-                    <VideoPlayer videoUrl={`/api/video-proxy?url=${encodeURIComponent(mappedVideo.videoUrl)}`} />
+                    <VideoPlayer videoUrl={`/api/video-proxy?url=${encodeURIComponent(mappedVideo.videoUrl)}`} subtitles={subtitles} />
                   </div>
                 )
                 }

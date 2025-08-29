@@ -48,7 +48,32 @@ export async function GET(
   //           }
   //        ],
   //        "resolution" : "1920x1080",
-  //        "subtitles" : [],
+  //        subtitles: [
+  //   {
+  //     id: 1,
+  //     language: 'fr',
+  //     label: 'Français',
+  //     format: 'srt',
+  //     url: 'https://gloriafinance.fra1.digitaloceanspaces.com/sessions/subtitles/unknown-fr-1756452265137-30303001_SUB_FR.srt',
+  //     uploadedAt: 2025-08-29T07:27:35.000Z
+  //   },
+  //   {
+  //     id: 2,
+  //     language: 'en',
+  //     label: 'English',
+  //     format: 'srt',
+  //     url: 'https://gloriafinance.fra1.digitaloceanspaces.com/sessions/subtitles/unknown-en-1756452275484-30303001_SUB_EN.srt',
+  //     uploadedAt: 2025-08-29T07:27:35.000Z
+  //   },
+  //   {
+  //     id: 3,
+  //     language: 'de',
+  //     label: 'Deutsch',
+  //     format: 'srt',
+  //     url: 'https://gloriafinance.fra1.digitaloceanspaces.com/sessions/subtitles/unknown-de-1756452293700-30303001_SUB_NL.srt',
+  //     uploadedAt: 2025-08-29T07:27:35.000Z
+  //   }
+  // ],
   //        "tagIds" : [],
   //        "thumbnail" : "https://leadhockey.ams3.digitaloceanspaces.com/sessions/thumbnails/1751650011273-thumbnail.jpg",
   //        "title" : "Test",

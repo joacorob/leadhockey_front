@@ -42,20 +42,34 @@ export function VideoPlayer({
 }: VideoPlayerProps) {
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const playerRef = useRef<VideoJsPlayer | null>(null);
+  console.log("Subtitles", subtitles);
 
   // Helper to infer MIME type from url
   const inferMimeType = (url: string): string | undefined => {
-    const ext = url.split(".").pop()?.toLowerCase();
-    switch (ext) {
-      case "mp4":
-        return "video/mp4";
-      case "m4v":
-        return "video/x-m4v";
-      case "webm":
-        return "video/webm";
-      default:
-        return undefined;
+    try {
+      const u = new URL(url, typeof window !== "undefined" ? window.location.href : "http://localhost");
+      // If proxy pattern ?url=remote, inspect remote ext
+      const searchUrl = u.searchParams.get("url");
+      const path = searchUrl ?? u.pathname;
+      const ext = path.split(".").pop()?.toLowerCase();
+      switch (ext) {
+        case "mp4":
+          return "video/mp4";
+        case "m4v":
+          return "video/x-m4v";
+        case "webm":
+          return "video/webm";
+        default:
+          return undefined;
+      }
+    } catch {
+      return undefined;
     }
+  };
+
+  const buildSource = (url: string) => {
+    const mime = inferMimeType(url);
+    return mime ? { src: url, type: mime } : { src: url };
   };
 
   // Initialise player once
@@ -72,18 +86,20 @@ export function VideoPlayer({
 
       wrapperRef.current.appendChild(videoEl);
 
+      const sourceObj = buildSource(videoUrl);
       playerRef.current = videojs(videoEl, {
         autoplay,
         controls,
         fluid,
         poster,
         preload: "auto",
-        sources: [{ src: videoUrl, type: inferMimeType(videoUrl) }],
+        sources: [sourceObj],
         ...options,
       });
 
       const vjs = playerRef.current as VideoJsPlayer;
       subtitles.forEach((track, idx) => {
+        console.log("Adding subtitle", track);
         vjs.addRemoteTextTrack(
           {
             kind: "subtitles",
@@ -102,8 +118,9 @@ export function VideoPlayer({
   // Update source if videoUrl changes
   useEffect(() => {
     const player = playerRef.current as VideoJsPlayer;
-    if (player) {
-      player.src({ src: videoUrl });
+    if (player && videoUrl) {
+      console.log("Updating video source", videoUrl);
+      player.src([buildSource(videoUrl)]);
       if (autoplay) player.play();
     }
   }, [videoUrl, autoplay]);

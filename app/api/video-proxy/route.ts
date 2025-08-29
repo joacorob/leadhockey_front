@@ -43,6 +43,13 @@ export async function GET(req: NextRequest) {
   responseHeaders.set("Access-Control-Allow-Headers", "Range")
   responseHeaders.set("Access-Control-Expose-Headers", "Content-Range, Accept-Ranges")
 
+  // After cloning headers, ensure we have a proper Content-Type for video/mp4 etc.
+  if (!responseHeaders.get("Content-Type") || responseHeaders.get("Content-Type") === "application/octet-stream") {
+    const ext = remoteUrl.split('.').pop()?.toLowerCase()
+    const mime = ext === 'mp4' ? 'video/mp4' : ext === 'm4v' ? 'video/x-m4v' : ext === 'webm' ? 'video/webm' : undefined
+    if (mime) responseHeaders.set('Content-Type', mime)
+  }
+
   return new Response(remoteResponse.body, {
     status: remoteResponse.status,
     headers: responseHeaders,
