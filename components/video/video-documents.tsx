@@ -11,6 +11,7 @@ interface Document {
   type: string
   size: string
   description: string
+  url: string // direct download URL for the document
 }
 
 interface VideoDocumentsProps {
@@ -22,40 +23,78 @@ export function VideoDocuments({ documents }: VideoDocumentsProps) {
   const [downloadedFiles, setDownloadedFiles] = useState<Set<string>>(new Set())
   const [downloadProgress, setDownloadProgress] = useState<Record<string, number>>({})
 
-  const simulateDownload = async (fileId: string) => {
-    setDownloadingFiles(prev => new Set([...prev, fileId]))
-    
-    // Simulate download progress
-    for (let progress = 0; progress <= 100; progress += 10) {
-      setDownloadProgress(prev => ({ ...prev, [fileId]: progress }))
-      await new Promise(resolve => setTimeout(resolve, 100))
+  /**
+   * Performs an actual file download using the Fetch API and provides basic progress feedback.
+   */
+  const downloadFile = async (doc: Document) => {
+    if (downloadedFiles.has(doc.id) || downloadingFiles.has(doc.id)) return
+
+    setDownloadingFiles(prev => new Set([...prev, doc.id]))
+    setDownloadProgress(prev => ({ ...prev, [doc.id]: 0 }))
+
+    try {
+      const proxyUrl = `/api/file-proxy?url=${encodeURIComponent(doc.url)}&name=${encodeURIComponent(doc.name)}`
+      const response = await fetch(proxyUrl)
+      if (!response.ok) throw new Error(`Failed to download ${doc.name}`)
+
+      // Attempt to track progress if browser supports it
+      if (response.body && response.headers.get("Content-Length")) {
+        const total = Number(response.headers.get("Content-Length"))
+        const reader = response.body.getReader()
+        let received = 0
+        const chunks: Uint8Array[] = []
+
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          if (value) {
+            chunks.push(value)
+            received += value.length
+            const progress = Math.round((received / total) * 100)
+            setDownloadProgress(prev => ({ ...prev, [doc.id]: progress }))
+          }
+        }
+
+        const blob = new Blob(chunks, { type: "application/pdf" })
+        const blobUrl = window.URL.createObjectURL(blob)
+        triggerFileSave(blobUrl, doc.name)
+      } else {
+        // Fallback: just create a link to the URL (stream not readable / no length)
+        triggerFileSave(doc.url, doc.name)
+        setDownloadProgress(prev => ({ ...prev, [doc.id]: 100 }))
+      }
+
+      setDownloadedFiles(prev => new Set([...prev, doc.id]))
+    } catch (err) {
+      console.error(err)
+      // You could show an error toast here
+    } finally {
+      setDownloadingFiles(prev => {
+        const s = new Set(prev)
+        s.delete(doc.id)
+        return s
+      })
     }
-    
-    setDownloadingFiles(prev => {
-      const newSet = new Set(prev)
-      newSet.delete(fileId)
-      return newSet
-    })
-    
-    setDownloadedFiles(prev => new Set([...prev, fileId]))
-    setDownloadProgress(prev => {
-      const newProgress = { ...prev }
-      delete newProgress[fileId]
-      return newProgress
-    })
+  }
+
+  const triggerFileSave = (href: string, filename: string) => {
+    const link = document.createElement("a")
+    link.href = href
+    link.download = filename.endsWith(".pdf") ? filename : `${filename}.pdf`
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
   }
 
   const handleDownload = (document: Document) => {
     console.log("Downloading:", document.name)
-    simulateDownload(document.id)
+    downloadFile(document)
   }
 
   const handleDownloadAll = () => {
     console.log("Downloading all documents")
     documents.forEach(doc => {
-      if (!downloadedFiles.has(doc.id) && !downloadingFiles.has(doc.id)) {
-        simulateDownload(doc.id)
-      }
+      downloadFile(doc)
     })
   }
 

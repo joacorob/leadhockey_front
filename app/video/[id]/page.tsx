@@ -46,10 +46,11 @@ function VideoViewContent() {
 
   const documents = (videoData?.pdfs ?? []).map((pdf: any) => ({
     id: String(pdf.id),
-    name: pdf.name,
+    name: pdf.name ?? `document-${pdf.id}.pdf`,
     type: "PDF",
     size: pdf.size ? `${(pdf.size / (1024 * 1024)).toFixed(1)} MB` : "",
     description: "Training resource",
+    url: pdf.url ?? pdf.link ?? pdf.path ?? `/${pdf.id}.pdf`,
   }))
 
   return (
