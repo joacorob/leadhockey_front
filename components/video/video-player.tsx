@@ -59,6 +59,8 @@ export function VideoPlayer({
           return "video/x-m4v";
         case "webm":
           return "video/webm";
+        case "m3u8":
+          return "application/x-mpegURL";
         default:
           return undefined;
       }
