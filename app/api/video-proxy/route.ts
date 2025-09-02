@@ -24,6 +24,45 @@ export async function GET(req: NextRequest) {
     headers,
   })
 
+  const contentType = remoteResponse.headers.get("Content-Type") || ""
+  const isM3U8 = contentType.includes("application/vnd.apple.mpegurl") || contentType.includes("application/x-mpegURL") || remoteUrl.endsWith(".m3u8")
+
+  // Track if we end up rewriting the playlist so we can adjust headers later
+  let wasRewritten = false;
+
+  let body: BodyInit | null = remoteResponse.body
+
+  // If playlist, rewrite segment URIs so they point back to this proxy
+  if (isM3U8) {
+    const text = await remoteResponse.text()
+    const base = remoteUrl.split("/").slice(0, -1).join("/") + "/"
+    const rewritten = text
+      .split("\n")
+      .map((line) => {
+        if (line.trim() === "") return line
+
+        // Handle attribute directives (#EXT-X-KEY:URI="..." or #EXT-X-MAP:URI="...")
+        if (line.startsWith("#EXT") && line.includes("URI=")) {
+          return line.replace(/URI="(.*?)"/, (_match, uri) => {
+            const abs = /^https?:\/\//i.test(uri) ? uri : base + uri
+            return `URI="/api/video-proxy?url=${encodeURIComponent(abs)}"`
+          })
+        }
+
+        // Skip other comments
+        if (line.startsWith("#")) return line
+
+        // Segment URI line
+        const trimmed = line.trim()
+        const abs = /^https?:\/\//i.test(trimmed) ? trimmed : base + trimmed
+        return `/api/video-proxy?url=${encodeURIComponent(abs)}`
+      })
+      .join("\n")
+
+    body = rewritten
+    wasRewritten = true
+  }
+
   // Clone headers from the remote response that are important for media playback
   const responseHeaders = new Headers()
   // Preserve content type / length / range headers if present
@@ -32,6 +71,11 @@ export async function GET(req: NextRequest) {
     if (value) responseHeaders.set(name, value)
   }
   ;["Content-Type", "Content-Length", "Accept-Ranges", "Content-Range"].forEach(copyHeader)
+
+  // If we rewrote the playlist, the original Content-Length is no longer valid
+  if (wasRewritten) {
+    responseHeaders.delete("Content-Length")
+  }
 
   // Add caching if desired (optional)
   if (!responseHeaders.has("Cache-Control")) {
@@ -50,7 +94,7 @@ export async function GET(req: NextRequest) {
     if (mime) responseHeaders.set('Content-Type', mime)
   }
 
-  return new Response(remoteResponse.body, {
+  return new Response(body, {
     status: remoteResponse.status,
     headers: responseHeaders,
   })

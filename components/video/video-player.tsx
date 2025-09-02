@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import videojs from "video.js";
+import { Parser as M3U8Parser } from "m3u8-parser";
 import "video.js/dist/video-js.css";
 
 type VideoJsPlayer = any;
@@ -40,6 +41,10 @@ export function VideoPlayer({
   options = {},
   subtitles = [],
 }: VideoPlayerProps) {
+  // If consumer did not provide subtitles, we will attempt to detect them from
+  // an HLS manifest automatically using `m3u8-parser`.
+  const [autoSubs, setAutoSubs] = useState<Subtitle[]>([]);
+
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const playerRef = useRef<VideoJsPlayer | null>(null);
   console.log("Subtitles", subtitles);
@@ -153,6 +158,55 @@ export function VideoPlayer({
     }
   }, [subtitles]);
 
+  // ---------------------------------------------------------------------
+  // Auto-detect subtitles from an HLS master playlist (if any)
+  // ---------------------------------------------------------------------
+  useEffect(() => {
+    // Only attempt if the caller did not supply subtitles explicitly
+    if (subtitles.length > 0) return;
+
+    const isM3U8 = videoUrl.endsWith(".m3u8") || videoUrl.includes(".m3u8?");
+    if (!isM3U8) return;
+
+    const fetchAndParse = async () => {
+      try {
+        const res = await fetch(videoUrl, { cache: "no-store" });
+        if (!res.ok) return;
+        const text = await res.text();
+
+        const parser = new M3U8Parser();
+        parser.push(text);
+        parser.end();
+
+        const { mediaGroups } = parser.manifest as any;
+        const subsGroup = mediaGroups?.SUBTITLES ?? {};
+
+        const collected: Subtitle[] = [];
+
+        Object.values(subsGroup).forEach((group: any) => {
+          Object.values(group).forEach((def: any) => {
+            if (def?.uri) {
+              const abs = new URL(def.uri, videoUrl).toString();
+              collected.push({
+                url: abs,
+                label: def?.name ?? def?.language ?? "Subtitle",
+                language: def?.language ?? "und",
+                // Attempt to infer format from URI extension
+                format: abs.endsWith(".srt") ? "srt" : "vtt",
+              });
+            }
+          });
+        });
+
+        setAutoSubs(collected);
+      } catch (err) {
+        console.error("Failed to auto-detect subtitles", err);
+      }
+    };
+
+    fetchAndParse();
+  }, [videoUrl, subtitles]);
+
   // Dispose player on unmount
   useEffect(() => {
     const player = playerRef.current as VideoJsPlayer;
@@ -163,6 +217,37 @@ export function VideoPlayer({
       }
     };
   }, []);
+
+  // Merge explicitly provided subtitles with auto-detected ones (avoid dups)
+  const effectiveSubs = subtitles.length > 0 ? subtitles : autoSubs;
+
+  // Ensure we refresh the player whenever effectiveSubs changes
+  useEffect(() => {
+    const vjs = playerRef.current as VideoJsPlayer;
+    if (!vjs) return;
+
+    // Remove existing
+    const existing = vjs.remoteTextTracks?.();
+    if (existing) {
+      for (let i = existing.length - 1; i >= 0; i--) {
+        vjs.removeRemoteTextTrack(existing[i]);
+      }
+    }
+
+    effectiveSubs.forEach((track, idx) => {
+      vjs.addRemoteTextTrack(
+        {
+          kind: "subtitles",
+          src: track.url,
+          srclang: track.language,
+          label: track.label,
+          default: idx === 0,
+          type: track.format === "srt" ? "application/x-subrip" : "text/vtt",
+        },
+        false
+      );
+    });
+  }, [effectiveSubs]);
 
   return <div data-vjs-player ref={wrapperRef} className="w-full h-full" />;
 }
