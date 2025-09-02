@@ -35,6 +35,108 @@ interface VideoPlayerProps {
   subtitles?: Subtitle[];
 }
 
+// -----------------------------------------------------------------------------
+// Quality selector (manual resolution switcher) -------------------------------
+// -----------------------------------------------------------------------------
+// We register a custom Video.js component that lists available quality levels
+// discovered by the HLS tech (via the `qualityLevels()` API). Users can then
+// force-select a specific resolution or return to the default adaptive setting.
+// The implementation is self-contained and does **not** rely on any 3rd-party
+// plugins so that no extra NPM packages or script tags are required.
+
+// Only register once (during module evaluation) to avoid duplicates in
+// Fast-Refresh / Hot-Reload situations.
+if (!(videojs as any).hasQualitySelector) {
+  const MenuButton = videojs.getComponent("MenuButton");
+  const MenuItem = videojs.getComponent("MenuItem");
+
+  class QualityMenuItem extends (MenuItem as any) {
+    constructor(player: any, options: any) {
+      super(player, options);
+      this.height = options.height; // number | 'auto'
+      this.label = options.label;
+      this.controlText(options.label);
+    }
+
+    handleClick() {
+      super.handleClick();
+      const levels = this.player().qualityLevels();
+      if (this.height === "auto") {
+        for (let i = 0; i < levels.length; i += 1) {
+          levels[i].enabled = true;
+        }
+      } else {
+        for (let i = 0; i < levels.length; i += 1) {
+          levels[i].enabled = levels[i].height === this.height;
+        }
+      }
+      // Log to console for debug purposes
+      /* eslint-disable no-console */
+      console.log(`Switching quality to ${this.label}`);
+      /* eslint-enable no-console */
+      // Notify selector to update its label
+      this.player().trigger("qualitychange", { label: this.label });
+    }
+  }
+
+  class QualitySelector extends (MenuButton as any) {
+    constructor(player: any, options: any) {
+      super(player, options);
+      this.currentLabel = "Auto";
+      this.controlText(this.currentLabel);
+      this.addClass("vjs-quality-selector");
+
+      // Listen for new quality levels & UI updates
+      player.qualityLevels().on("addqualitylevel", () => {
+        this.update();
+      });
+
+      // Listen for explicit quality change events
+      player.on("qualitychange", (_e: any, data: any) => {
+        if (data?.label) {
+          this.currentLabel = data.label;
+          this.updateButtonText();
+        }
+      });
+
+      this.update(); // initial build
+      this.updateButtonText();
+    }
+
+    updateButtonText() {
+      this.controlText(this.currentLabel);
+      const span = this.el().querySelector(".vjs-control-text");
+      if (span) span.textContent = this.currentLabel;
+    }
+
+    // Build items list (unique heights + auto)
+    createItems() {
+      const player = this.player();
+      const levels = player.qualityLevels();
+      const heights: number[] = [];
+      for (let i = 0; i < levels.length; i += 1) {
+        const h = levels[i].height;
+        if (h && heights.indexOf(h) === -1) heights.push(h);
+      }
+      heights.sort((a, b) => b - a); // high → low
+
+      const items: any[] = [];
+      items.push(new QualityMenuItem(player, { label: "Auto", height: "auto" }));
+      heights.forEach((h) => {
+        items.push(
+          new QualityMenuItem(player, { label: `${h}p`, height: h })
+        );
+      });
+      return items;
+    }
+  }
+
+  videojs.registerComponent("QualitySelector", QualitySelector as any);
+  (videojs as any).hasQualitySelector = true;
+}
+// -----------------------------------------------------------------------------
+// End Quality selector registration -------------------------------------------
+
 export function VideoPlayer({
   videoUrl,
   poster,
@@ -105,6 +207,20 @@ export function VideoPlayer({
         preload: "auto",
         sources: [sourceObj],
         ...options,
+      });
+
+      // Add quality selector button once player is ready
+      playerRef.current.ready(() => {
+        const vjs = playerRef.current as any;
+        try {
+          const controlBar = vjs.controlBar;
+          const childrenArr = controlBar?.children?.() ?? [];
+          const fullscreenIdx = childrenArr.findIndex((c: any) => c?.name && c.name() === "FullscreenToggle");
+          const insertIdx = fullscreenIdx > -1 ? fullscreenIdx : undefined;
+          controlBar.addChild("QualitySelector", {}, insertIdx);
+        } catch (err) {
+          console.warn("Failed to add QualitySelector", err);
+        }
       });
 
       const vjs = playerRef.current as VideoJsPlayer;
