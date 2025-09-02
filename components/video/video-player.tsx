@@ -2,6 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import videojs from "video.js";
+// Ensure HLS (m3u8) playback support when using the ESM build of video.js
+// eslint-disable-next-line import/no-extraneous-dependencies
+import "@videojs/http-streaming";
 import { Parser as M3U8Parser } from "m3u8-parser";
 import "video.js/dist/video-js.css";
 
@@ -41,13 +44,13 @@ export function VideoPlayer({
   options = {},
   subtitles = [],
 }: VideoPlayerProps) {
+  console.log("VideoPlayer", videoUrl);
   // If consumer did not provide subtitles, we will attempt to detect them from
   // an HLS manifest automatically using `m3u8-parser`.
   const [autoSubs, setAutoSubs] = useState<Subtitle[]>([]);
 
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const playerRef = useRef<VideoJsPlayer | null>(null);
-  console.log("Subtitles", subtitles);
 
   // Helper to infer MIME type from url
   const inferMimeType = (url: string): string | undefined => {
@@ -106,7 +109,6 @@ export function VideoPlayer({
 
       const vjs = playerRef.current as VideoJsPlayer;
       subtitles.forEach((track, idx) => {
-        console.log("Adding subtitle", track);
         vjs.addRemoteTextTrack(
           {
             kind: "subtitles",
@@ -171,6 +173,7 @@ export function VideoPlayer({
     const fetchAndParse = async () => {
       try {
         const res = await fetch(videoUrl, { cache: "no-store" });
+        console.log("Fetching subtitles", videoUrl);
         if (!res.ok) return;
         const text = await res.text();
 

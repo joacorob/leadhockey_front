@@ -84,7 +84,7 @@ function VideoViewContent() {
                   <p className="text-center text-red-600">Failed to load video.</p>
                 ) : (
                   <div className="bg-black rounded-lg overflow-hidden">
-                    <VideoPlayer videoUrl={`/api/video-proxy?url=${encodeURIComponent(mappedVideo.videoUrl)}`} subtitles={subtitles} />
+                    <VideoPlayer videoUrl={`${mappedVideo.videoUrl}`} subtitles={subtitles} />
                   </div>
                 )
                 }

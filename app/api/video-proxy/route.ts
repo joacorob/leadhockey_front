@@ -89,9 +89,29 @@ export async function GET(req: NextRequest) {
 
   // After cloning headers, ensure we have a proper Content-Type for video/mp4 etc.
   if (!responseHeaders.get("Content-Type") || responseHeaders.get("Content-Type") === "application/octet-stream") {
-    const ext = remoteUrl.split('.').pop()?.toLowerCase()
-    const mime = ext === 'mp4' ? 'video/mp4' : ext === 'm4v' ? 'video/x-m4v' : ext === 'webm' ? 'video/webm' : undefined
-    if (mime) responseHeaders.set('Content-Type', mime)
+    const cleanPath = remoteUrl.split('?')[0].split('#')[0];
+    const ext = cleanPath.split('.').pop()?.toLowerCase();
+    let mime: string | undefined;
+    switch (ext) {
+      case 'mp4':
+        mime = 'video/mp4';
+        break;
+      case 'm4v':
+        mime = 'video/x-m4v';
+        break;
+      case 'webm':
+        mime = 'video/webm';
+        break;
+      case 'm3u8':
+        mime = 'application/x-mpegURL';
+        break;
+      case 'ts':
+        mime = 'video/mp2t';
+        break;
+      default:
+        break;
+    }
+    if (mime) responseHeaders.set('Content-Type', mime);
   }
 
   return new Response(body, {
