@@ -26,7 +26,7 @@ function VideoViewContent() {
         id: videoData.id,
         title: videoData.title,
         description: videoData.description,
-        videoUrl: videoData.videoUrl,
+        videoUrl: videoData.videoProcessedUrl ?? videoData.videoUrl,
         duration: videoData.duration,
         views: videoData.views ?? 0,
         likes: videoData.likes ?? 0,
