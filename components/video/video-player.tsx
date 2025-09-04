@@ -86,6 +86,12 @@ if (!(videojs as any).hasQualitySelector) {
       this.controlText(this.currentLabel);
       this.addClass("vjs-quality-selector");
 
+      // Aca hay que poner que si adentro de algun hijo (cualquiera) hay un span con la clase vjs-control-text, tiene que tener position relative
+      const children = this.el().querySelectorAll(".vjs-control-text");
+      children.forEach((child: any) => {
+        child.style.position = "relative";
+      });
+
       // Listen for new quality levels & UI updates
       player.qualityLevels().on("addqualitylevel", () => {
         this.update();
