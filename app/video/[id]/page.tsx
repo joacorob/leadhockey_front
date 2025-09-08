@@ -114,10 +114,10 @@ function VideoViewContent() {
                 {/* Desktop Documents & Comments */}
                 <div className="hidden lg:block">
                   <Tabs defaultValue="documents" className="w-full">
-                    <TabsList>
+                    {/* <TabsList>
                       <TabsTrigger value="documents">Documents & Resources</TabsTrigger>
                       <TabsTrigger value="comments">Comments</TabsTrigger>
-                    </TabsList>
+                    </TabsList> */}
                     <TabsContent value="documents" className="mt-6">
                       <VideoDocuments documents={documents} />
                     </TabsContent>
