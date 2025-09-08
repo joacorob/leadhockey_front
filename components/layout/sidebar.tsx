@@ -54,14 +54,12 @@ const sidebarItems: SidebarItem[] = [
 
 async function getCategories() {
   try {
-    
+    const res = await fetch(`${process.env.NEXTAUTH_URL}/api/categories`)
+    console.log(res)
     console.log(`${process.env.NEXTAUTH_URL}/api/categories`, 'ACAAA')
-    const res = await fetch(`${process.env.NEXTAUTH_URL}/api/categories`, { next: { revalidate: 60 } })
     const data = await res.json()
-    console.log(data)
    
-    return data.data
-    // return 'nada'
+    return data
   } catch (error) {
     console.log(error)
     return 'error'
