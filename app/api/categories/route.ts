@@ -7,13 +7,11 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const search = searchParams.get("search")
-
+    
     // Extract access token from NextAuth session (if exists)
     const session = await getServerSession(authOptions)
-    console.log("session", session)
     const accessToken: any = (session as any)?.accessToken
-
-    console.log("accessToken", accessToken)
+    console.log("ACCESSTOKEN", accessToken)
 
     // Try to fetch from external API first
     try {
@@ -38,6 +36,7 @@ export async function GET(request: NextRequest) {
           )
         }
 
+        // console.log("filteredCategories", filteredCategories)
         return NextResponse.json({ success: true, data: filteredCategories })
       }
     } catch (externalError) {
