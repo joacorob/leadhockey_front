@@ -2,9 +2,6 @@ import Link from "next/link"
 import Image from "next/image"
 import { ChevronDown, ChevronRight } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { getServerAuthSession } from "@/lib/getServerAuthSession"
-import { authOptions } from "@/lib/auth"
-import { getServerSession } from "next-auth"
 
 
 interface SidebarItem {
@@ -54,15 +51,19 @@ const sidebarItems: SidebarItem[] = [
 
 async function getCategories() {
   try {
-    const res = await fetch(`${process.env.NEXTAUTH_URL}/api/categories`)
-    console.log(res)
-    console.log(`${process.env.NEXTAUTH_URL}/api/categories`, 'ACAAA')
-    const data = await res.json()
-   
-    return data
+    // Usamos URL relativa para que Next reenvíe las cookies automáticamente
+    const res = await fetch("/api/categories", { cache: "no-store" })
+
+    if (!res.ok) {
+      console.error("/api/categories responded", res.status)
+      return null
+    }
+
+    const json = await res.json()
+    return json?.data ?? null
   } catch (error) {
-    console.log(error)
-    return 'error'
+    console.error("getCategories error", error)
+    return null
   }
 }
 

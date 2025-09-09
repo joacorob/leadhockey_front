@@ -18,6 +18,7 @@ export async function GET(request: NextRequest) {
       })
 
       const externalData = await externalResponse.json()
+      console.log(externalData, 'externalData')
       return NextResponse.json({ success: true, data: externalData })
       
     } catch (externalError: any) {
