@@ -68,10 +68,31 @@ export default function BillingPage() {
     // Handle cancellation logic
   }
 
-  const handleUpgrade = (plan: string) => {
-    console.log("Upgrading to:", plan)
-    setShowUpgradeDialog(false)
-    // Handle upgrade logic
+  const handleUpgrade = async (plan: string) => {
+    try {
+      const res = await fetch("/api/stripe/create-checkout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ tier: 'premium' }),
+      })
+
+      if (!res.ok) throw new Error("Failed to create checkout session")
+
+      const { url } = await res.json()
+
+      // Close dialog before redirecting
+      setShowUpgradeDialog(false)
+
+      // Redirect user to Stripe Checkout
+      if (url) {
+        window.location.href = url as string
+      }
+    } catch (error) {
+      console.error(error)
+      // Optionally show toast or notification here
+    }
   }
 
   const handleDownloadInvoice = (invoiceId: string) => {
