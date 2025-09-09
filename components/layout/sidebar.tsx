@@ -2,6 +2,8 @@ import Link from "next/link"
 import Image from "next/image"
 import { ChevronDown, ChevronRight } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/lib/auth"
 
 
 interface SidebarItem {
@@ -51,16 +53,29 @@ const sidebarItems: SidebarItem[] = [
 
 async function getCategories() {
   try {
-    // Usamos URL relativa para que Next reenvíe las cookies automáticamente
-    const res = await fetch("/api/categories", { cache: "no-store" })
+    const session: any = await getServerSession(authOptions)
+    const accessToken: string | undefined = session?.accessToken
+
+    if (!accessToken) {
+      console.warn("No access token found in session")
+      return null
+    }
+
+    const res = await fetch(`${process.env.LEAD_BACKEND}/api/v1/categories`, {
+      headers: {
+        accept: "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+      cache: "no-store",
+    })
 
     if (!res.ok) {
-      console.error("/api/categories responded", res.status)
+      console.error("Backend categories responded", res.status)
       return null
     }
 
     const json = await res.json()
-    return json?.data ?? null
+    return json ?? null
   } catch (error) {
     console.error("getCategories error", error)
     return null
@@ -107,7 +122,7 @@ export async function Sidebar() {
   }
 
   const categories = await getCategories()
-  console.log(categories)
+  console.log(JSON.stringify(categories, null, 2) )
 
   return (
     <aside className="w-64 bg-lead-blue h-screen flex flex-col">
