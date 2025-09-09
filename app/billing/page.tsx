@@ -62,10 +62,27 @@ export default function BillingPage() {
     expiry: "12/26"
   }
 
-  const handleCancelSubscription = () => {
-    console.log("Cancelling subscription...")
-    setShowCancelDialog(false)
-    // Handle cancellation logic
+  const handleCancelSubscription = async () => {
+    try {
+      const res = await fetch("/api/stripe/create-portal", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      })
+
+      if (!res.ok) throw new Error("Failed to create billing portal session")
+
+      const { url } = await res.json()
+
+      setShowCancelDialog(false)
+
+      if (url) {
+        window.location.href = url as string
+      }
+    } catch (error) {
+      console.error(error)
+    }
   }
 
   const handleUpgrade = async (plan: string) => {
@@ -185,7 +202,7 @@ export default function BillingPage() {
 
                   <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
                     <DialogTrigger asChild>
-                      <Button variant="outline">Cancel Subscription</Button>
+                      <Button variant="outline">Manage Subscription</Button>
                     </DialogTrigger>
                     <DialogContent>
                       <DialogHeader>
@@ -214,7 +231,7 @@ export default function BillingPage() {
             </Card>
 
             {/* Payment Method */}
-            <Card>
+            {/* <Card>
               <CardHeader>
                 <CardTitle>Payment Method</CardTitle>
               </CardHeader>
@@ -232,10 +249,10 @@ export default function BillingPage() {
                   <Button variant="outline" size="sm">Update</Button>
                 </div>
               </CardContent>
-            </Card>
+            </Card> */}
 
             {/* Billing History */}
-            <Card>
+            {/* <Card>
               <CardHeader>
                 <CardTitle>Billing History</CardTitle>
               </CardHeader>
@@ -266,10 +283,10 @@ export default function BillingPage() {
                   ))}
                 </div>
               </CardContent>
-            </Card>
+            </Card> */}
 
             {/* Billing Information */}
-            <Card>
+            {/* <Card>
               <CardHeader>
                 <CardTitle>Billing Information</CardTitle>
               </CardHeader>
@@ -322,7 +339,7 @@ export default function BillingPage() {
                 
                 <Button>Update Billing Information</Button>
               </CardContent>
-            </Card>
+            </Card> */}
           </div>
         </main>
       </div>
