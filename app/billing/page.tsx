@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Sidebar } from "@/components/layout/sidebar"
 import { Header } from "@/components/layout/header"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -16,20 +16,51 @@ import { CreditCard, Calendar, Download, AlertCircle, CheckCircle, X } from 'luc
 export default function BillingPage() {
   const [showCancelDialog, setShowCancelDialog] = useState(false)
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false)
+  const [userInfo, setUserInfo] = useState<any>(null)
 
-  const currentPlan = {
-    name: "Pro Plan",
-    price: 59,
-    period: "month",
-    status: "active",
-    nextBilling: "August 8, 2025",
+  useEffect(() => {
+    const fetchUserInfo = async () => {
+      try {
+        const res = await fetch("/api/me")
+        const json = await res.json()
+        if (json.success) {
+          console.log(json.data)
+          setUserInfo(json.data)
+        } else {
+          console.error(json.error)
+        }
+      } catch (error) {
+        console.error(error)
+      }
+    }
+
+    fetchUserInfo()
+  }, [])
+
+  const isPremium = userInfo?.data?.tier === "premium"
+  const stripeSub = userInfo?.data?.stripeSubscription
+
+  const currentPlan = isPremium && stripeSub ? {
+    name: "Premium Plan",
+    price: stripeSub.amount / 100,
+    period: stripeSub.interval,
+    status: stripeSub.status,
+    nextBilling: new Date(stripeSub.currentPeriodEnd * 1000).toLocaleDateString(),
     features: [
-      "Access to 500+ training videos",
-      "Advanced progress analytics", 
-      "1-on-1 coaching sessions (2/month)",
-      "Custom training plans",
-      "Priority support"
-    ]
+      "Unlimited access to all content",
+      "Monthly 1-on-1 coaching sessions",
+      "Priority support",
+    ],
+  } : {
+    name: "Free Plan",
+    price: 0,
+    period: "-",
+    status: "inactive",
+    nextBilling: "-",
+    features: [
+      "Limited access to videos",
+      "Ads included",
+    ],
   }
 
   const billingHistory = [
@@ -172,60 +203,14 @@ export default function BillingPage() {
                 </div>
 
                 <div className="flex gap-3">
-                  <Dialog open={showUpgradeDialog} onOpenChange={setShowUpgradeDialog}>
-                    <DialogTrigger asChild>
-                      <Button>Upgrade Plan</Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Upgrade Your Plan</DialogTitle>
-                      </DialogHeader>
-                      <div className="space-y-4">
-                        <div className="border rounded-lg p-4">
-                          <div className="flex items-center justify-between mb-2">
-                            <h3 className="font-semibold">Elite Plan</h3>
-                            <span className="text-2xl font-bold">$99/month</span>
-                          </div>
-                          <ul className="text-sm space-y-1 mb-4">
-                            <li>• Unlimited access to all content</li>
-                            <li>• Weekly 1-on-1 coaching sessions</li>
-                            <li>• Personalized video analysis</li>
-                            <li>• Direct coach messaging</li>
-                          </ul>
-                          <Button onClick={() => handleUpgrade('elite')} className="w-full">
-                            Upgrade to Elite
-                          </Button>
-                        </div>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
-
-                  <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
-                    <DialogTrigger asChild>
-                      <Button variant="outline">Manage Subscription</Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2">
-                          <AlertCircle className="w-5 h-5 text-red-500" />
-                          Cancel Subscription
-                        </DialogTitle>
-                      </DialogHeader>
-                      <div className="space-y-4">
-                        <p className="text-gray-600">
-                          Are you sure you want to cancel your subscription? You'll lose access to all premium features at the end of your current billing period.
-                        </p>
-                        <div className="flex gap-3">
-                          <Button variant="outline" onClick={() => setShowCancelDialog(false)}>
-                            Keep Subscription
-                          </Button>
-                          <Button variant="destructive" onClick={handleCancelSubscription}>
-                            Yes, Cancel
-                          </Button>
-                        </div>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
+                  {!isPremium && (
+                    <Button onClick={() => handleUpgrade('premium')}>Upgrade to Premium</Button>
+                  )}
+                  {isPremium && (
+                    <Button variant="outline" onClick={() => setShowCancelDialog(true)}>
+                      Manage Subscription
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>
