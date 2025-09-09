@@ -7,14 +7,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { CreditCard, Calendar, Download, AlertCircle, CheckCircle, X } from 'lucide-react'
+import { Download, CheckCircle } from 'lucide-react'
 
 export default function BillingPage() {
-  const [showCancelDialog, setShowCancelDialog] = useState(false)
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false)
   const [userInfo, setUserInfo] = useState<any>(null)
 
@@ -93,7 +88,7 @@ export default function BillingPage() {
     expiry: "12/26"
   }
 
-  const handleCancelSubscription = async () => {
+  const handleManageSubscription = async () => {
     try {
       const res = await fetch("/api/stripe/create-portal", {
         method: "POST",
@@ -105,8 +100,6 @@ export default function BillingPage() {
       if (!res.ok) throw new Error("Failed to create billing portal session")
 
       const { url } = await res.json()
-
-      setShowCancelDialog(false)
 
       if (url) {
         window.location.href = url as string
@@ -168,27 +161,33 @@ export default function BillingPage() {
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
                   <span>Current Plan</span>
-                  <Badge variant={currentPlan.status === 'active' ? 'default' : 'secondary'}>
-                    {currentPlan.status === 'active' ? 'Active' : 'Inactive'}
-                  </Badge>
+                  {isPremium && (
+                    <Badge variant={currentPlan.status === 'active' ? 'default' : 'secondary'}>
+                      {currentPlan.status === 'active' ? 'Active' : 'Inactive'}
+                    </Badge>
+                  )}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-lg font-semibold">{currentPlan.name}</h3>
-                    <p className="text-2xl font-bold text-primary">
-                      ${currentPlan.price}
-                      <span className="text-sm font-normal text-gray-600">/{currentPlan.period}</span>
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm text-gray-600">Next billing date</p>
-                    <p className="font-medium">{currentPlan.nextBilling}</p>
-                  </div>
-                </div>
+                {isPremium && (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-lg font-semibold">{currentPlan.name}</h3>
+                        <p className="text-2xl font-bold text-primary">
+                          ${currentPlan.price}
+                          <span className="text-sm font-normal text-gray-600">/{currentPlan.period}</span>
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm text-gray-600">Next billing date</p>
+                        <p className="font-medium">{currentPlan.nextBilling}</p>
+                      </div>
+                    </div>
 
-                <Separator />
+                    <Separator />
+                  </>
+                )}
 
                 <div>
                   <h4 className="font-medium mb-2">Plan Features</h4>
@@ -207,7 +206,7 @@ export default function BillingPage() {
                     <Button onClick={() => handleUpgrade('premium')}>Upgrade to Premium</Button>
                   )}
                   {isPremium && (
-                    <Button variant="outline" onClick={() => setShowCancelDialog(true)}>
+                    <Button variant="outline" onClick={handleManageSubscription}>
                       Manage Subscription
                     </Button>
                   )}

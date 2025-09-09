@@ -18,7 +18,7 @@ export async function POST() {
           ...(authHeader && { Authorization: authHeader }),
         },
         body: JSON.stringify({
-          return_url: `${domain}/dashboard/settings?portal=return`,
+          return_url: `${domain}/billing`,
         }),
       }
     )

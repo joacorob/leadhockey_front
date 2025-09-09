@@ -26,8 +26,8 @@ export async function POST(request: Request) {
         },
         body: JSON.stringify({
           tier: tier || "premium",
-          success_url: `${domain}/dashboard/settings?checkout=success`,
-          cancel_url: `${domain}/dashboard/settings?checkout=cancel`,
+          success_url: `${domain}/billing`,
+          cancel_url: `${domain}/billing`,
         }),
       }
     )
