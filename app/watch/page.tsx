@@ -55,6 +55,7 @@ export default function WatchPage() {
   const [filteredVideos, setFilteredVideos] = useState<Video[]>([])
   const [filters, setFilters] = useState<VideoFilter[]>([])
   const [activeFilters, setActiveFilters] = useState<Record<string, any>>({})
+  const [showFilters, setShowFilters] = useState(false)
 
   const searchParams = useSearchParams()
   const categoryParam = searchParams.get("category") // id as string or null
@@ -330,23 +331,17 @@ export default function WatchPage() {
                     />
                   </div>
 
-                  <Select value={selectedCategory} onValueChange={handleCategoryChange}>
-                    <SelectTrigger className="w-48">
-                      <FilterIcon className="w-4 h-4 mr-2" />
-                      <SelectValue placeholder="Category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categoryOptions.map((category) => (
-                        <SelectItem key={category} value={category}>
-                          {category === "all" ? "All Categories" : category}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <button
+                    type="button"
+                    onClick={() => setShowFilters((prev) => !prev)}
+                    className="flex items-center justify-center w-10 h-10 border border-input rounded-md hover:bg-accent"
+                  >
+                    <FilterIcon className="w-4 h-4" />
+                  </button>
                 </div>
 
                 {/* Dynamic Filters from backend */}
-                {filtersLoading ? (
+                {showFilters && (filtersLoading ? (
                   <p>Loading filters...</p>
                 ) : Array.isArray(filters) && filters.length > 0 ? (
                   <div className="flex flex-wrap gap-4 mb-4">
@@ -390,10 +385,11 @@ export default function WatchPage() {
                       </div>
                     ))}
                   </div>
-                ) : null}
+                ) : null)}
 
                 {/* Active filters */}
-                <div className="flex items-center gap-2 mb-4">
+                {showFilters && (
+                  <div className="flex items-center gap-2 mb-4">
                   {searchTerm && (
                     <Badge variant="secondary" className="flex items-center gap-1">
                       Search: {searchTerm}
@@ -413,7 +409,8 @@ export default function WatchPage() {
                       </button>
                     </Badge>
                   )}
-                </div>
+                  </div>
+                )}
               </div>
 
               {videosLoading ? (
