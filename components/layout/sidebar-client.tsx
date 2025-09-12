@@ -18,6 +18,7 @@ interface SidebarClientProps {
 interface SidebarItem {
   title: string
   href?: string
+  description?: string
   children?: SidebarItem[]
 }
 
@@ -49,41 +50,51 @@ export default function SidebarClient({ categories: initialCategories }: Sidebar
 
   const sidebarItems: SidebarItem[] = [
     {
-      title: 'MY LEAD',
-      href: '/dashboard',
-    },
-    {
-      title: 'WATCH',
+      title: 'LEARN',
+      description: "Explore LEAD's educational content",
       children: [
-        { title: 'All Videos', href: '/watch' },
-        ...categories.map((c) => ({ title: c.name, href: `/watch?category=${c.id}` })),
-        { title: 'Favorites', href: '/watch/favorites' },
+        // categorías desde la API
+        ...categories.map((c) => ({ title: c.name, href: `/learn?category=${c.id}` })),
+        { title: 'My playlists', href: '/learn/playlists' },
+        { title: 'My favourites', href: '/learn/favourites' },
       ],
     },
     {
       title: 'CREATE',
+      description: 'Build your own drills and sessions',
       children: [
-        { title: 'Build a drill', href: '/create/drill' },
-        { title: 'Build a session', href: '/create/session' },
+        { title: 'Create drill', href: '/create/drill' },
+        { title: 'Create training', href: '/create/training' },
+        { title: 'Create club training', href: '/create/club-training' },
       ],
     },
     {
       title: 'TRAIN',
+      description: 'Your training tools & planning',
       children: [
         { title: 'My drills', href: '/train/drills' },
-        { title: 'My sessions', href: '/train/sessions' },
-        { title: 'Club sessions', href: '/train/club-sessions' },
+        { title: 'My trainings', href: '/train/trainings' },
+        { title: 'Club trainings', href: '/train/club-trainings' },
+      ],
+    },
+    {
+      title: 'COACH',
+      description: 'Coaching tools & team management',
+      children: [
+        { title: 'Coaching board', href: '/coach/board' },
+        { title: 'Team management', href: '/coach/team-management' },
       ],
     },
     {
       title: 'EXPLORE',
+      description: 'Discover more & get inspired',
       children: [
         { title: 'All videos', href: '/explore' },
         { title: 'Players & coaches', href: '/explore/players' },
         { title: 'Blog', href: '/explore/blog' },
       ],
     },
-  ]
+  ]  
 
   const renderSidebarItem = (item: SidebarItem, level = 0): JSX.Element => {
     const hasChildren = item.children && item.children.length > 0
