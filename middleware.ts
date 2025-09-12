@@ -2,8 +2,10 @@ import { NextResponse, type NextRequest } from "next/server"
 import { getToken } from "next-auth/jwt"
 
 export async function middleware(request: NextRequest) {
-  // Only handle internal API routes.
-  if (!request.nextUrl.pathname.startsWith("/api")) {
+  const { pathname } = request.nextUrl
+
+  // Allow requests to login page and NextAuth as they don't require auth
+  if (pathname === "/login" || pathname.startsWith("/api/auth")) {
     return NextResponse.next()
   }
 
@@ -16,25 +18,37 @@ export async function middleware(request: NextRequest) {
     console.log("[middleware] accessToken", accessToken)
 
     if (accessToken) {
-      // Clone headers so we can append Authorization
-      const requestHeaders = new Headers(request.headers)
-      requestHeaders.set("Authorization", `Bearer ${accessToken}`)
+      // If the request is for an internal API route, attach the Authorization header
+      if (pathname.startsWith("/api")) {
+        const requestHeaders = new Headers(request.headers)
+        requestHeaders.set("Authorization", `Bearer ${accessToken}`)
 
-      return NextResponse.next({
-        request: {
-          headers: requestHeaders,
-        },
-      })
+        return NextResponse.next({
+          request: {
+            headers: requestHeaders,
+          },
+        })
+      }
+
+      // For non-API routes simply continue
+      return NextResponse.next()
     }
   } catch (error) {
     // In case of errors just continue the chain without modifying the request
     console.error("[middleware] Failed to attach access token", error)
   }
 
-  return NextResponse.next()
+  // No token found – redirect to login
+  const loginUrl = request.nextUrl.clone()
+  loginUrl.pathname = "/login"
+  return NextResponse.redirect(loginUrl, 301)
 }
 
 // Apply this middleware only to /api routes
 export const config = {
-  matcher: "/api/:path*",
+  // Protect everything except static files, the login page, and NextAuth routes
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|api/auth|login).*)",
+    "/api/:path*",
+  ],
 }
