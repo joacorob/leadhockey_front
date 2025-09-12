@@ -5,6 +5,7 @@ import Image from 'next/image'
 import { ChevronDown, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useEffect, useState } from 'react'
+import { usePathname, useSearchParams } from 'next/navigation'
 
 interface Category {
   id: number
@@ -54,9 +55,9 @@ export default function SidebarClient({ categories: initialCategories }: Sidebar
       description: "Explore LEAD's educational content",
       children: [
         // categorías desde la API
-        ...categories.map((c) => ({ title: c.name, href: `/learn?category=${c.id}` })),
-        { title: 'My playlists', href: '/learn/playlists' },
-        { title: 'My favourites', href: '/learn/favourites' },
+        ...categories.map((c) => ({ title: c.name, href: `/watch?category=${c.id}` })),
+        { title: 'My playlists', href: '/watch/playlists' },
+        { title: 'My favourites', href: '/watch/favourites' },
       ],
     },
     {
@@ -96,8 +97,36 @@ export default function SidebarClient({ categories: initialCategories }: Sidebar
     },
   ]  
 
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+
+  // Helper to check if a given href matches current location (including query params)
+  const isHrefActive = (href?: string) => {
+    if (!href) return false
+
+    // Split the incoming href in path and query parts
+    const [hrefPath, hrefQuery] = href.split('?')
+
+    // First, path must match exactly
+    if (pathname !== hrefPath) return false
+
+    // If the href has no query string, consider it active as long as path matches
+    if (!hrefQuery) return true
+
+    // Otherwise compare the query strings (order sensitive but our links are generated consistently)
+    const currentQuery = searchParams?.toString() ?? ''
+    return currentQuery === hrefQuery
+  }
+
+  // Recursively determine if an item or any of its children are active
+  const isItemActive = (item: SidebarItem): boolean => {
+    if (isHrefActive(item.href)) return true
+    return item.children ? item.children.some(isItemActive) : false
+  }
+
   const renderSidebarItem = (item: SidebarItem, level = 0): JSX.Element => {
     const hasChildren = item.children && item.children.length > 0
+    const active = isItemActive(item)
 
     if (!hasChildren) {
       return (
@@ -105,7 +134,8 @@ export default function SidebarClient({ categories: initialCategories }: Sidebar
           key={item.title}
           href={item.href || '#'}
           className={cn(
-            'block px-4 py-3 text-sm text-white hover:bg-white/10 transition-colors',
+            'block px-4 py-3 text-sm hover:bg-white/10 transition-colors',
+            active ? 'bg-white/20 text-white' : 'text-white',
             level === 0 && 'font-medium text-xs uppercase tracking-wider',
             level > 0 && 'pl-8 text-white/80'
           )}
@@ -115,12 +145,14 @@ export default function SidebarClient({ categories: initialCategories }: Sidebar
       )
     }
 
+    const defaultOpen = level === 0 && (['CREATE', 'TRAIN'].includes(item.title) || active)
 
     return (
-      <details key={item.title} className="group" open={level === 0 && ['CREATE', 'TRAIN'].includes(item.title)}>
+      <details key={item.title} className="group" open={defaultOpen}>
         <summary
           className={cn(
-            'w-full flex items-center justify-between px-4 py-3 text-left text-sm font-medium text-white hover:bg-white/10 transition-colors cursor-pointer select-none',
+            'w-full flex items-center justify-between px-4 py-3 text-left text-sm font-medium hover:bg-white/10 transition-colors cursor-pointer select-none',
+            active ? 'bg-white/20 text-white' : 'text-white',
             level === 0 && 'text-xs uppercase tracking-wider'
           )}
         >

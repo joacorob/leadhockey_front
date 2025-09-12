@@ -118,9 +118,10 @@ export default function WatchPage() {
     })
     // Re-apply filtering whenever the param or videos list changes
     filterVideos(searchTerm, categoryName)
-    // Fetch filters for this category
+    // Reset filters until new ones are fetched by useApi
     if (categoryName !== "all") {
-      refetchFilters()
+      setFilters([])
+      setActiveFilters({})
     } else {
       setFilters([])
       setActiveFilters({})
@@ -348,45 +349,47 @@ export default function WatchPage() {
                 {filtersLoading ? (
                   <p>Loading filters...</p>
                 ) : Array.isArray(filters) && filters.length > 0 ? (
-                  filters.map((filter) => (
-                    <div key={filter.id} className="mb-4">
-                      <label className="block text-sm font-medium mb-2">{filter.label}</label>
-                      {filter.ui_type === "select" && (
-                        <Select
-                          value={(activeFilters[filter.code] as string) || ""}
-                          onValueChange={(val) => handleFilterChange(filter.code, val)}
-                        >
-                          <SelectTrigger className="w-48">
-                            <SelectValue placeholder={`Select ${filter.label}`} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {filter.options.map((opt) => (
-                              <SelectItem key={opt.id} value={String(opt.value)}>
-                                {opt.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      )}
+                  <div className="flex flex-wrap gap-4 mb-4">
+                    {filters.map((filter) => (
+                      <div key={filter.id} className="flex flex-col w-48 shrink-0">
+                        <label className="block text-sm font-medium mb-2">{filter.label}</label>
+                        {filter.ui_type === "select" && (
+                          <Select
+                            value={(activeFilters[filter.code] as string) || ""}
+                            onValueChange={(val) => handleFilterChange(filter.code, val)}
+                          >
+                            <SelectTrigger className="w-full">
+                              <SelectValue placeholder={`Select ${filter.label}`} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {filter.options.map((opt) => (
+                                <SelectItem key={opt.id} value={String(opt.value)}>
+                                  {opt.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
 
-                      {filter.ui_type === "checkbox" && (
-                        <div className="flex flex-wrap gap-2">
-                          {filter.options.map((opt) => {
-                            const checked = Array.isArray(activeFilters[filter.code]) && (activeFilters[filter.code] as any[]).includes(opt.value)
-                            return (
-                              <label key={opt.id} className="flex items-center gap-1 text-sm">
-                                <Checkbox
-                                  checked={checked}
-                                  onCheckedChange={(c) => handleFilterChange(filter.code, opt.value, c as boolean)}
-                                />
-                                {opt.label}
-                              </label>
-                            )
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  ))
+                        {filter.ui_type === "checkbox" && (
+                          <div className="flex flex-wrap gap-2">
+                            {filter.options.map((opt) => {
+                              const checked = Array.isArray(activeFilters[filter.code]) && (activeFilters[filter.code] as any[]).includes(opt.value)
+                              return (
+                                <label key={opt.id} className="flex items-center gap-1 text-sm">
+                                  <Checkbox
+                                    checked={checked}
+                                    onCheckedChange={(c) => handleFilterChange(filter.code, opt.value, c as boolean)}
+                                  />
+                                  {opt.label}
+                                </label>
+                              )
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 ) : null}
 
                 {/* Active filters */}
