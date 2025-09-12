@@ -143,7 +143,7 @@ export default function SidebarClient({ categories: initialCategories }: Sidebar
   }
 
   return (
-    <aside className="w-64 bg-lead-blue h-screen flex flex-col">
+    <aside className="w-64 bg-lead-blue h-screen flex flex-col min-h-screen overflow-y-auto">
       {/* Logo */}
       <div className="p-6 border-b border-white/10">
         <Image
