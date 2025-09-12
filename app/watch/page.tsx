@@ -66,24 +66,33 @@ export default function WatchPage() {
     totalPages: number
   }
 
-  
+  const categories = React.useMemo(()=>{
+    const raw = (categoriesResponse as any)?.data?.data?.items ?? [];
+    return Array.isArray(raw) ? raw as Category[] : [];
+  }, [categoriesResponse]);
+
+  // Resolve selected category ID (after categories are known)
+  const selectedCategoryId = React.useMemo(() => {
+    if (selectedCategory === "all") return undefined
+    const match = categories.find((c) => c.name === selectedCategory)
+    return match?.id
+  }, [selectedCategory, categories])
+
   const { data: videosResponse, loading: videosLoading } = useApi<VideosApiResponse>("/videos")
   const {
     data: filtersResponse,
     loading: filtersLoading,
     refetch: refetchFilters,
-  } = useApi<{ success: boolean; data: VideoFilter[] }>("/filters")
+  } = useApi<{ success: boolean; data: any }>(
+    "/filters",
+    selectedCategoryId ? { categoryId: selectedCategoryId } : undefined,
+  )
   
   useEffect(() => {
     console.log("categoriesResponse", categoriesResponse)
     console.log("videosLoading", videosLoading)
     console.log("filters", filtersResponse)
   }, [categoriesLoading, videosLoading])
-
-  const categories = React.useMemo(()=>{
-    const raw = (categoriesResponse as any)?.data?.data?.items ?? [];
-    return Array.isArray(raw) ? raw as Category[] : [];
-  }, [categoriesResponse]);
 
   const videos = React.useMemo(()=>{
     const raw = (videosResponse as any)?.data?.data?.items ?? [];
@@ -121,7 +130,12 @@ export default function WatchPage() {
   // Update filters when response arrives
   useEffect(() => {
     if (filtersResponse && (filtersResponse as any).success) {
-      setFilters((filtersResponse as any).data as VideoFilter[])
+      const list = Array.isArray((filtersResponse as any).data?.data)
+        ? (filtersResponse as any).data.data
+        : Array.isArray((filtersResponse as any).data)
+        ? (filtersResponse as any).data
+        : []
+      setFilters(list as VideoFilter[])
     }
   }, [filtersResponse])
 
@@ -333,7 +347,7 @@ export default function WatchPage() {
                 {/* Dynamic Filters from backend */}
                 {filtersLoading ? (
                   <p>Loading filters...</p>
-                ) : (
+                ) : Array.isArray(filters) && filters.length > 0 ? (
                   filters.map((filter) => (
                     <div key={filter.id} className="mb-4">
                       <label className="block text-sm font-medium mb-2">{filter.label}</label>
@@ -373,7 +387,7 @@ export default function WatchPage() {
                       )}
                     </div>
                   ))
-                )}
+                ) : null}
 
                 {/* Active filters */}
                 <div className="flex items-center gap-2 mb-4">
