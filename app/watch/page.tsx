@@ -10,9 +10,11 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { useApi } from "@/lib/hooks/use-api"
-import { Search, Filter } from "lucide-react"
+import { Search, Filter as FilterIcon } from "lucide-react"
 import { useSearchParams } from "next/navigation"
 import React from "react"
+import { Filter as VideoFilter } from "@/lib/types/api"
+import { Checkbox } from "@/components/ui/checkbox"
 
 interface Category {
   id: string
@@ -51,6 +53,8 @@ export default function WatchPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("all")
   const [filteredVideos, setFilteredVideos] = useState<Video[]>([])
+  const [filters, setFilters] = useState<VideoFilter[]>([])
+  const [activeFilters, setActiveFilters] = useState<Record<string, any>>({})
 
   const searchParams = useSearchParams()
   const categoryParam = searchParams.get("category") // id as string or null
@@ -64,10 +68,16 @@ export default function WatchPage() {
 
   
   const { data: videosResponse, loading: videosLoading } = useApi<VideosApiResponse>("/videos")
+  const {
+    data: filtersResponse,
+    loading: filtersLoading,
+    refetch: refetchFilters,
+  } = useApi<{ success: boolean; data: VideoFilter[] }>("/filters")
   
   useEffect(() => {
     console.log("categoriesResponse", categoriesResponse)
     console.log("videosLoading", videosLoading)
+    console.log("filters", filtersResponse)
   }, [categoriesLoading, videosLoading])
 
   const categories = React.useMemo(()=>{
@@ -99,7 +109,21 @@ export default function WatchPage() {
     })
     // Re-apply filtering whenever the param or videos list changes
     filterVideos(searchTerm, categoryName)
+    // Fetch filters for this category
+    if (categoryName !== "all") {
+      refetchFilters()
+    } else {
+      setFilters([])
+      setActiveFilters({})
+    }
   }, [categoryParam, categories, videos])
+
+  // Update filters when response arrives
+  useEffect(() => {
+    if (filtersResponse && (filtersResponse as any).success) {
+      setFilters((filtersResponse as any).data as VideoFilter[])
+    }
+  }, [filtersResponse])
 
 
   const handleSearch = (term: string) => {
@@ -117,7 +141,28 @@ export default function WatchPage() {
     filterVideos(searchTerm, categoryName)
   }
 
-  const filterVideos = (search: string, category: string) => {
+  const handleFilterChange = (code: string, value: any, checked?: boolean) => {
+    setActiveFilters((prev) => {
+      const current = prev[code]
+      const filterDef = filters.find((f) => f.code === code)
+
+      if (!filterDef) return prev
+
+      if (filterDef.ui_type === "checkbox") {
+        let arr = Array.isArray(current) ? [...current] : []
+        if (checked) {
+          arr.push(value)
+        } else {
+          arr = arr.filter((v: any) => v !== value)
+        }
+        return { ...prev, [code]: arr }
+      } else {
+        return { ...prev, [code]: value }
+      }
+    })
+  }
+
+  const filterVideos = (search: string, category: string, extraFilters: Record<string, any> = activeFilters) => {
     let filtered = videos
 
     if (search) {
@@ -136,6 +181,16 @@ export default function WatchPage() {
       }
     }
 
+    // Apply dynamic backend filters
+    Object.entries(extraFilters).forEach(([code, val]) => {
+      if (!val || (Array.isArray(val) && val.length === 0)) return
+      if (Array.isArray(val)) {
+        filtered = filtered.filter((v) => val.includes((v as any)[code]))
+      } else {
+        filtered = filtered.filter((v) => (v as any)[code] === val)
+      }
+    })
+
     // Map API video format to UI expected format
     const mappedVideos = filtered.map((video) => ({
       ...video,
@@ -149,6 +204,12 @@ export default function WatchPage() {
 
     setFilteredVideos(mappedVideos as Video[])
   }
+
+  // Re-filter when activeFilters changes
+  useEffect(() => {
+    filterVideos(searchTerm, selectedCategory, activeFilters)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeFilters])
 
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60)
@@ -256,7 +317,7 @@ export default function WatchPage() {
 
                   <Select value={selectedCategory} onValueChange={handleCategoryChange}>
                     <SelectTrigger className="w-48">
-                      <Filter className="w-4 h-4 mr-2" />
+                      <FilterIcon className="w-4 h-4 mr-2" />
                       <SelectValue placeholder="Category" />
                     </SelectTrigger>
                     <SelectContent>
@@ -268,6 +329,51 @@ export default function WatchPage() {
                     </SelectContent>
                   </Select>
                 </div>
+
+                {/* Dynamic Filters from backend */}
+                {filtersLoading ? (
+                  <p>Loading filters...</p>
+                ) : (
+                  filters.map((filter) => (
+                    <div key={filter.id} className="mb-4">
+                      <label className="block text-sm font-medium mb-2">{filter.label}</label>
+                      {filter.ui_type === "select" && (
+                        <Select
+                          value={(activeFilters[filter.code] as string) || ""}
+                          onValueChange={(val) => handleFilterChange(filter.code, val)}
+                        >
+                          <SelectTrigger className="w-48">
+                            <SelectValue placeholder={`Select ${filter.label}`} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {filter.options.map((opt) => (
+                              <SelectItem key={opt.id} value={String(opt.value)}>
+                                {opt.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+
+                      {filter.ui_type === "checkbox" && (
+                        <div className="flex flex-wrap gap-2">
+                          {filter.options.map((opt) => {
+                            const checked = Array.isArray(activeFilters[filter.code]) && (activeFilters[filter.code] as any[]).includes(opt.value)
+                            return (
+                              <label key={opt.id} className="flex items-center gap-1 text-sm">
+                                <Checkbox
+                                  checked={checked}
+                                  onCheckedChange={(c) => handleFilterChange(filter.code, opt.value, c as boolean)}
+                                />
+                                {opt.label}
+                              </label>
+                            )
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  ))
+                )}
 
                 {/* Active filters */}
                 <div className="flex items-center gap-2 mb-4">
