@@ -111,3 +111,19 @@ export interface VideoFilters {
   page?: number
   limit?: number
 }
+
+// Video dynamic filters
+export interface FilterOption {
+  id: number
+  value: string | number
+  label: string
+  ordering: number
+}
+
+export interface Filter {
+  id: number
+  code: string
+  label: string
+  ui_type: "select" | "checkbox" | "number"
+  options: FilterOption[]
+}
