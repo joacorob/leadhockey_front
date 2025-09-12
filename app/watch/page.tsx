@@ -21,6 +21,7 @@ interface Category {
   name: string
   color: string
   icon: string
+  imageSrc?: string
   description?: string
   image?: string
 }
@@ -69,6 +70,7 @@ export default function WatchPage() {
 
   const categories = React.useMemo(()=>{
     const raw = (categoriesResponse as any)?.data?.data?.items ?? [];
+    // console.log("categoriesResponse", categoriesResponse)
     return Array.isArray(raw) ? raw as Category[] : [];
   }, [categoriesResponse]);
 
@@ -241,7 +243,7 @@ export default function WatchPage() {
 
   const categoryData = (categories || []).map((cat) => ({
     name: cat.name,
-    image: cat.image || `/field-hockey-${cat.name.toLowerCase().replace(" ", "-")}.png`,
+    image: cat.imageSrc || `/field-hockey-${cat.name.toLowerCase().replace(" ", "-")}.png`,
     description: cat.description || `Master ${cat.name.toLowerCase()} techniques`,
     color: cat.color,
     icon: cat.icon,
