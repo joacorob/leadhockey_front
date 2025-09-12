@@ -1,0 +1,64 @@
+name: Deploy Prod (In-Place)
+
+on:
+  push:
+    branches: ["master"]
+
+concurrency:
+  group: deploy-deepwhale-prod
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      PROJECT_DIR: /root/leadhockey_front
+      NODE_VERSION: 24
+      BRANCH: master
+      ECOSYSTEM: ecosystem.config.js
+
+    steps:
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }} # e.g. "root"
+          key: ${{ secrets.SSH_KEY }}
+          script_stop: true
+          script: |
+            set -euo pipefail
+
+            # ----- nvm bootstrap (handles fresh servers) -----
+            export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
+            if [ ! -s "$NVM_DIR/nvm.sh" ]; then
+              curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+            fi
+            . "$NVM_DIR/nvm.sh"
+
+            # ----- go to project -----
+            cd "${{ env.PROJECT_DIR }}"
+
+            # ----- pull code -----
+            git fetch --all --prune
+            git checkout .
+            git checkout origin/${{ env.BRANCH }}
+            git pull --ff-only origin "${{ env.BRANCH }}"
+
+            # ----- node & deps -----
+            nvm use ${{ env.NODE_VERSION }}
+
+            npm install
+
+            npm run build
+
+            # ----- pm2 -----
+            if ! command -v pm2 >/dev/null 2>&1; then
+              npm i -g pm2
+            fi
+
+            # startOrReload if available; otherwise fallback
+            pm2 startOrReload "${{ env.ECOSYSTEM }}" --env production || pm2 start "${{ env.ECOSYSTEM }}" --env production
+            pm2 save
+
+      - name: Summary
+        run: echo "✅ Deployed ${{ env.PROJECT_DIR }} from ${{ env.BRANCH }} with PM2 ecosystem" >> $GITHUB_STEP_SUMMARY

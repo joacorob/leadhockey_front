@@ -53,7 +53,7 @@ export function Header() {
       <div className="container mx-auto px-4">
         <div className="flex h-16 items-center justify-between">
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center space-x-8">
+          {/* <nav className="hidden md:flex items-center space-x-8">
             <Link href="/" className="text-sm font-medium hover:text-blue-600 transition-colors">
               Home
             </Link>
@@ -69,7 +69,7 @@ export function Header() {
             <Link href="/contact" className="text-sm font-medium hover:text-blue-600 transition-colors">
               Contact
             </Link>
-          </nav>
+          </nav> */}
 
           {/* Search Bar - Desktop */}
           <div className="hidden md:flex flex-1 max-w-md mx-8">

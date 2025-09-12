@@ -3,19 +3,16 @@
 import { useRouter } from "next/navigation"
 import Image from "next/image"
 import { Play, User, Eye } from 'lucide-react'
-import { allVideos } from "@/data/videos"
 
 interface RelatedVideosProps {
-  currentVideoId: string
+  playlistData: any
 }
 
-export function RelatedVideos({ currentVideoId }: RelatedVideosProps) {
+export function RelatedVideos({ playlistData  }: RelatedVideosProps) {
   const router = useRouter()
   
   // Filter out current video and get related videos
-  const relatedVideos = allVideos
-    .filter(video => video.id !== currentVideoId)
-    .slice(0, 8) // Show 8 related videos
+  const relatedVideos = playlistData.sessions.slice(0, 8)
 
   const handleVideoClick = (videoId: string) => {
     router.push(`/video/${videoId}`)
@@ -26,7 +23,7 @@ export function RelatedVideos({ currentVideoId }: RelatedVideosProps) {
       <h2 className="text-xl font-semibold text-gray-900 mb-6">Related Videos</h2>
       
       <div className="space-y-4">
-        {relatedVideos.map((video) => (
+        {relatedVideos.map((video: any) => (
           <div
             key={video.id}
             onClick={() => handleVideoClick(video.id)}

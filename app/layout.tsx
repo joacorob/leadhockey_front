@@ -2,6 +2,9 @@ import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
 import { MobileNav } from '@/components/layout/mobile-nav'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+import SessionProvider from '@/providers/provider'
 
 const inter = Inter({ 
   subsets: ['latin'],
@@ -15,15 +18,24 @@ export const metadata: Metadata = {
     generator: 'v0.app'
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const session = await getServerSession(authOptions)
   return (
     <html lang="en" className={`scroll-smooth ${inter.variable}`}>
+      <head>
+        <link rel="icon" href="/favicon.ico" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet" />
+      </head>
       <body className={inter.className}>
-        {children}
+        <SessionProvider session={session}>
+          {children}
+        </SessionProvider>
         <MobileNav />
         <div className="pb-16 md:pb-0" /> {/* Bottom padding for mobile nav */}
       </body>

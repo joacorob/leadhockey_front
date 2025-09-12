@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge"
 import { useApi } from "@/lib/hooks/use-api"
 import { Search, Filter } from "lucide-react"
+import { useSearchParams } from "next/navigation"
 
 interface Category {
   id: string
@@ -50,6 +51,9 @@ export default function WatchPage() {
   const [selectedCategory, setSelectedCategory] = useState("all")
   const [filteredVideos, setFilteredVideos] = useState<Video[]>([])
 
+  const searchParams = useSearchParams()
+  const categoryParam = searchParams.get("category") // id as string or null
+
   const { data: categoriesResponse, loading: categoriesLoading } = useApi<ApiResponse<Category[]>>("/categories")
   interface VideosApiResponse {
     items: any[]
@@ -70,10 +74,24 @@ export default function WatchPage() {
 
 
   useEffect(() => {
-    if (videos.length > 0) {
-      filterVideos(searchTerm, selectedCategory)
+    // When the URL query param changes, update the selected category accordingly
+    if (!categories.length) return // wait until categories are loaded
+
+    let categoryName = "all"
+    if (categoryParam) {
+      const matched = categories.find((c) => c.id.toString() === categoryParam)
+      if (matched) {
+        categoryName = matched.name
+      }
     }
-  }, [videos, searchTerm, selectedCategory])
+
+    setSelectedCategory((prev) => {
+      if (prev === categoryName) return prev
+      return categoryName
+    })
+    // Re-apply filtering whenever the param or videos list changes
+    filterVideos(searchTerm, categoryName)
+  }, [categoryParam, categories, videos])
 
 
   const handleSearch = (term: string) => {
