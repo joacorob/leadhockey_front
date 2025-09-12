@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge"
 import { useApi } from "@/lib/hooks/use-api"
 import { Search, Filter } from "lucide-react"
 import { useSearchParams } from "next/navigation"
+import React from "react"
 
 interface Category {
   id: string
@@ -61,16 +62,23 @@ export default function WatchPage() {
     totalPages: number
   }
 
+  
   const { data: videosResponse, loading: videosLoading } = useApi<VideosApiResponse>("/videos")
+  
+  useEffect(() => {
+    console.log("categoriesResponse", categoriesResponse)
+    console.log("videosLoading", videosLoading)
+  }, [categoriesLoading, videosLoading])
 
-  // Extract categories from the nested API response structure
-  const categories = Array.isArray((categoriesResponse as any)?.data?.data?.items)
-    ? ((categoriesResponse as any).data.data.items as Category[])
-    : []
+  const categories = React.useMemo(()=>{
+    const raw = (categoriesResponse as any)?.data?.data?.items ?? [];
+    return Array.isArray(raw) ? raw as Category[] : [];
+  }, [categoriesResponse]);
 
-    const videos = Array.isArray((videosResponse as any)?.data?.data?.items)
-    ? ((videosResponse as any).data.data.items as Video[])
-    : []
+  const videos = React.useMemo(()=>{
+    const raw = (videosResponse as any)?.data?.data?.items ?? [];
+    return Array.isArray(raw) ? raw as Video[] : [];
+  }, [videosResponse]);
 
 
   useEffect(() => {
