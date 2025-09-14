@@ -36,6 +36,7 @@ export function VideoInfo({ video }: VideoInfoProps) {
   }
 
   const handleFavorite = () => {
+    // TODO: Implement favorite functionality
     setIsFavorited(!isFavorited)
   }
 
@@ -84,7 +85,7 @@ export function VideoInfo({ video }: VideoInfoProps) {
 
           <Button
             onClick={handleFavorite}
-            variant={isFavorited ? "default" : "outline"}
+            variant={"outline"}
             size="sm"
             className="flex items-center space-x-1"
           >
