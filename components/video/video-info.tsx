@@ -1,8 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Image from "next/image"
-import { Heart, Share2, Flag, ThumbsUp, Eye, Calendar, Tag } from 'lucide-react'
+import { Heart, Share2, Flag, Eye, Calendar, Tag } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -28,16 +28,42 @@ interface VideoInfoProps {
 
 export function VideoInfo({ video }: VideoInfoProps) {
   const [isLiked, setIsLiked] = useState(false)
-  const [isFavorited, setIsFavorited] = useState(false)
+  const [likesCount, setLikesCount] = useState(video.likes)
+  // const [isFavorited, setIsFavorited] = useState(false) // removed favorite button
   const [showFullDescription, setShowFullDescription] = useState(false)
 
-  const handleLike = () => {
-    setIsLiked(!isLiked)
-  }
+  // Fetch initial like status & count
+  useEffect(() => {
+    async function fetchLike() {
+      try {
+        const res = await fetch(`/api/like/${video.id}`)
+        if (!res.ok) return
+        const json = await res.json()
+        if (json?.data) {
+          setIsLiked(json.data.liked)
+          setLikesCount(json.data.likesCount)
+        }
+      } catch (_e) {
+        // silent
+      }
+    }
+    fetchLike()
+  }, [video.id])
 
-  const handleFavorite = () => {
-    // TODO: Implement favorite functionality
-    setIsFavorited(!isFavorited)
+  const handleLike = async () => {
+    try {
+      const res = await fetch(`/api/like/${video.id}`, { method: "POST" })
+      if (!res.ok) return
+      const json = await res.json()
+      if (json?.data) {
+        setIsLiked(json.data.liked)
+        setLikesCount(json.data.likesCount)
+      }
+    } catch (_e) {
+      // fallback optimistic toggle
+      setIsLiked((prev) => !prev)
+      setLikesCount((prev) => prev + (isLiked ? -1 : 1))
+    }
   }
 
   const handleShare = () => {
@@ -79,17 +105,8 @@ export function VideoInfo({ video }: VideoInfoProps) {
             size="sm"
             className="flex items-center space-x-1"
           >
-            <ThumbsUp className={`w-4 h-4 ${isLiked ? 'fill-current' : ''}`} />
-            <span>{video.likes + (isLiked ? 1 : 0)}</span>
-          </Button>
-
-          <Button
-            onClick={handleFavorite}
-            variant={"outline"}
-            size="sm"
-            className="flex items-center space-x-1"
-          >
-            <Heart className={`w-4 h-4 ${isFavorited ? 'fill-current text-red-500' : ''}`} />
+            <Heart className={`w-4 h-4 ${isLiked ? 'fill-current text-red-500' : ''}`} />
+            <span>{likesCount}</span>
           </Button>
 
           <Button
