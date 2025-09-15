@@ -35,7 +35,7 @@ export default function RegisterPage() {
   }
 
   return (
-    <AuthLayout title="Create Account" subtitle="Join LEAD Hockey and start your training journey">
+    <AuthLayout title="Create Account" subtitle="Join LEAD Hockey and start your training journey" showBackButton={false}>
       <div className="space-y-6">
         <AuthForm type="register" onSubmit={handleRegister} isLoading={isLoading} />
 

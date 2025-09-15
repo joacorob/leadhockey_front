@@ -20,7 +20,7 @@ export function AuthLayout({ children, title, subtitle, showBackButton = true }:
       <div className="container mx-auto px-4 py-8">
         {showBackButton && (
           <Button variant="ghost" asChild className="mb-8">
-            <Link href="/" className="flex items-center">
+            <Link href="/login" className="flex items-center">
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back to Home
             </Link>
@@ -47,11 +47,11 @@ export function AuthLayout({ children, title, subtitle, showBackButton = true }:
             </div>
 
             {/* Demo Notice */}
-            <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+            {/* <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
               <p className="text-sm text-yellow-800 text-center">
                 <strong>Demo Mode:</strong> This is a demonstration page. No actual authentication is performed.
               </p>
-            </div>
+            </div> */}
           </div>
         </div>
       </div>

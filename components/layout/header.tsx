@@ -54,7 +54,7 @@ export function Header() {
         <div className="flex h-16 items-center justify-between">
           {/* Desktop Navigation */}
           {/* <nav className="hidden md:flex items-center space-x-8">
-            <Link href="/" className="text-sm font-medium hover:text-blue-600 transition-colors">
+            <Link href="/login" className="text-sm font-medium hover:text-blue-600 transition-colors">
               Home
             </Link>
             <Link href="/explore" className="text-sm font-medium hover:text-blue-600 transition-colors">

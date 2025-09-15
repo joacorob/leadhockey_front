@@ -34,7 +34,7 @@ export default function LoginPage() {
   }
 
   return (
-    <AuthLayout title="Welcome Back" subtitle="Sign in to your LEAD Hockey account">
+    <AuthLayout title="Welcome Back" subtitle="Sign in to your LEAD Hockey account" showBackButton={false}>
       <div className="space-y-6">
         <AuthForm type="login" onSubmit={handleLogin} isLoading={isLoading} />
 

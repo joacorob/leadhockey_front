@@ -12,7 +12,7 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Logo and Description */}
           <div className="col-span-1 md:col-span-2">
-            <Link href="/" className="flex items-center space-x-2 mb-4">
+            <Link href="/login" className="flex items-center space-x-2 mb-4">
               <Image
                 src={navigationData.logo.src || "/placeholder.svg"}
                 alt={navigationData.logo.alt}

@@ -26,7 +26,7 @@ export default function NotFoundPage() {
         {/* Action Buttons */}
         <div className="space-y-4">
           <Button asChild className="w-full">
-            <Link href="/" className="flex items-center justify-center gap-2">
+            <Link href="/login" className="flex items-center justify-center gap-2">
               <Home className="w-4 h-4" />
               Go Home
             </Link>
@@ -60,11 +60,11 @@ export default function NotFoundPage() {
         </div>
 
         {/* Demo Notice */}
-        <div className="mt-6 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+        {/* <div className="mt-6 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
           <p className="text-sm text-yellow-800">
             <strong>Demo Mode:</strong> This is a demonstration 404 page
           </p>
-        </div>
+        </div> */}
       </div>
     </div>
   )

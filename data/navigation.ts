@@ -6,7 +6,7 @@ export const navigationData = {
     height: 40
   },
   links: [
-    { href: "/", label: "Home" },
+    { href: "/login", label: "Home" },
     { href: "/about", label: "About" },
     { href: "/programs", label: "Programs" },
     { href: "/pricing", label: "Pricing" },
