@@ -15,7 +15,12 @@ interface DraggableItemProps {
 export function DraggableItem({ type, subType, color, label, size, children }: DraggableItemProps) {
   const [{ isDragging }, drag] = useDrag(() => ({
     type: "drill-item",
-    item: { type, subType, color, label, size },
+    item: (() => {
+      const data = { type, subType, color, label, size }
+      // debug
+      console.log("Begin drag item", data)
+      return data
+    })(),
     collect: (monitor) => ({
       isDragging: monitor.isDragging(),
     }),

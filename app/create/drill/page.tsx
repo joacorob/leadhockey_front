@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { Sidebar } from "@/components/layout/sidebar"
 import { Header } from "@/components/layout/header"
-import { DrillCanvas } from "@/components/drill-builder/drill-canvas"
+import { DrillStage } from "@/components/drill-builder/drill-stage"
 import { Toolbox } from "@/components/drill-builder/toolbox"
 import { DrillForm } from "@/components/drill-builder/drill-form"
 import { FrameControls } from "@/components/drill-builder/frame-controls"
@@ -294,7 +294,7 @@ export default function BuildDrillPage() {
 
                 {/* Canvas */}
                 <div className="flex-1 min-w-0">
-                  <DrillCanvas
+                  <DrillStage
                     elements={currentFrame.elements}
                     selectedElements={selectedElements}
                     onAddElement={addElement}

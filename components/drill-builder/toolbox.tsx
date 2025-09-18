@@ -7,6 +7,7 @@ import { DraggableItem } from "./draggable-item"
 import { Trash2, Palette, Maximize2, Settings } from "lucide-react"
 import type { DrillElement } from "@/app/create/drill/page"
 import { useState } from "react"
+import { Input } from "@/components/ui/input"
 
 interface ToolboxProps {
   onClearCanvas: () => void
@@ -36,21 +37,21 @@ export function Toolbox({
 
   const equipmentItems = [
     { type: "equipment", subType: "cone-orange", color: presetColor },
-    { type: "equipment", subType: "cone-blue", color: "#3b82f6" },
-    { type: "equipment", subType: "line", color: "#000000" },
-    { type: "equipment", subType: "circle", color: "#ffffff" },
-    { type: "equipment", subType: "square", color: "#ffffff" },
+    { type: "equipment", subType: "cone-blue", color: presetColor },
+    { type: "equipment", subType: "line", color: presetColor },
+    { type: "equipment", subType: "circle", color: presetColor },
+    { type: "equipment", subType: "square", color: presetColor },
   ]
 
   const movementItems = [
-    { type: "movement", subType: "arrow" },
-    { type: "movement", subType: "dotted-line" },
-    { type: "movement", subType: "curved-line" },
+    { type: "movement", subType: "arrow", color: presetColor },
+    { type: "movement", subType: "dotted-line", color: presetColor },
+    { type: "movement", subType: "curved-line", color: presetColor },
   ]
 
   const textItems = [
-    { type: "text", subType: "text", label: "Text" },
-    { type: "text", subType: "note", label: "Note" },
+    { type: "text", subType: "text", label: "Text", color: presetColor },
+    { type: "text", subType: "note", label: "Note", color: presetColor },
   ]
 
   const colorPalette = [
@@ -196,6 +197,17 @@ export function Toolbox({
               </div>
             </div>
 
+            {selectedElement.type === "text" && (
+              <div className="mb-4">
+                <label className="text-xs text-gray-600 mb-2 block">Text Content</label>
+                <Input
+                  value={selectedElement.text || ""}
+                  onChange={(e) => onUpdateSelected && onUpdateSelected({ text: e.target.value })}
+                  className="h-8 text-xs"
+                />
+              </div>
+            )}
+
             <Button
               onClick={() => onUpdateSelected && onUpdateSelected({ id: "DELETE" })}
               variant="destructive"
@@ -258,7 +270,7 @@ export function Toolbox({
           <h3 className="text-xs font-medium text-gray-700 mb-3 uppercase tracking-wide">MOVEMENT</h3>
           <div className="flex gap-2">
             {movementItems.map((item, index) => (
-              <DraggableItem key={index} type={item.type} subType={item.subType} size={presetSize}>
+              <DraggableItem key={index} type={item.type} subType={item.subType} color={item.color} size={presetSize}>
                 <div className="cursor-grab active:cursor-grabbing">
                   {item.subType === "arrow" && (
                     <svg width="24" height="16" viewBox="0 0 24 16" className="text-black">
@@ -285,7 +297,7 @@ export function Toolbox({
           <h3 className="text-xs font-medium text-gray-700 mb-3 uppercase tracking-wide">TEXT</h3>
           <div className="flex gap-2">
             {textItems.map((item, index) => (
-              <DraggableItem key={index} type={item.type} subType={item.subType} label={item.label} size={presetSize}>
+              <DraggableItem key={index} type={item.type} subType={item.subType} label={item.label} color={item.color} size={presetSize}>
                 <Button
                   variant="outline"
                   size="sm"
