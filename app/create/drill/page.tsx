@@ -20,6 +20,7 @@ export interface DrillElement {
   label?: string
   text?: string
   size?: number // Added size property for element scaling
+  rotation?: number // Added rotation property for element orientation
 }
 
 export interface DrillFrame {
@@ -64,6 +65,7 @@ export default function BuildDrillPage() {
       ...element,
       id: `${element.type}-${Date.now()}-${Math.random()}`,
       size: element.size || 1, // Use provided size or default to 1
+      rotation: 0,
     }
 
     const idx = currentFrameRef.current

@@ -35,14 +35,34 @@ export const DrillStage = React.forwardRef<any, DrillStageProps>(function DrillS
   // Refs to Konva nodes of elements
   const nodeRefs = React.useRef(new Map<string, any>())
   const transformerRef = React.useRef<any>(null)
+  // Separate transformer for movement elements to control resize & rotate
+  const movementTransformerRef = React.useRef<any>(null)
+  // Flag to show transformer explicitly via double-click
+  const [showTransformer, setShowTransformer] = React.useState(false)
 
   // Update transformer nodes when selection changes
   React.useEffect(() => {
-    if (!transformerRef.current) return
-    const nodes = selectedElements.map((id) => nodeRefs.current.get(id)).filter(Boolean)
-    transformerRef.current.nodes(nodes)
-    transformerRef.current.getLayer()?.batchDraw()
-  }, [selectedElements])
+    // generic selection highlight (stroke yellow) already handled per node.
+
+    // Show movement transformer only when every selected element is type="movement"
+    const allMovement = showTransformer && selectedElements.length>0 && selectedElements.every((id)=>{
+      const el = elements.find((e)=>e.id===id)
+      return el?.type === "movement"
+    })
+
+    if (movementTransformerRef.current) {
+      if (!allMovement) {
+        if(process.env.NODE_ENV!=='production') console.log('Transformer hidden - conditions not met', selectedElements)
+        movementTransformerRef.current.nodes([])
+        movementTransformerRef.current.getLayer()?.batchDraw()
+      } else {
+        const nodes = selectedElements.map((id)=>nodeRefs.current.get(id)).filter(Boolean)
+        if(process.env.NODE_ENV!=='production') console.log('Setting transformer nodes', nodes.length, nodes)
+        movementTransformerRef.current.nodes(nodes)
+        movementTransformerRef.current.getLayer()?.batchDraw()
+      }
+    }
+  },[selectedElements,elements,showTransformer])
 
   // For group dragging delta calculations
   const dragAnchor = React.useRef<{ x: number; y: number } | null>(null)
@@ -102,19 +122,31 @@ export const DrillStage = React.forwardRef<any, DrillStageProps>(function DrillS
 
   const handleClick = (id: string, e: any) => {
     e.evt.cancelBubble = true
+    if(process.env.NODE_ENV!=='production') console.log('handleClick', id)
     if (selectedElements.includes(id)) return // keep selection
     onSelectionChange([id])
+    setShowTransformer(false)
+  }
+
+  const handleDoubleClick = (id: string, e:any) => {
+    e.evt.cancelBubble = true
+    if(process.env.NODE_ENV!=='production') console.log('handleDoubleClick', id)
+    if(!selectedElements.includes(id)){
+      onSelectionChange([id])
+    }
+    setShowTransformer(true)
   }
 
   const renderElement = (el: DrillElement) => {
     const commonProps = {
       x: el.x,
       y: el.y,
-      draggable: true,
+      draggable: !(showTransformer && selectedElements.includes(el.id)),
       onDragStart: handleDragStart,
       onDragMove: (e: any) => handleDragMove(el.id, e),
       onDragEnd: (e: any) => handleDragEnd(el.id, e),
       onClick: (e: any) => handleClick(el.id, e),
+      onDblClick: (e:any)=> handleDoubleClick(el.id,e),
     }
 
     const isSel = selectedElements.includes(el.id)
@@ -223,9 +255,11 @@ export const DrillStage = React.forwardRef<any, DrillStageProps>(function DrillS
                 points={[0, 0, 40, 0]}
                 pointerLength={8}
                 pointerWidth={8}
+                hitStrokeWidth={12}
                 fill={color}
                 stroke={color}
                 strokeWidth={3}
+                rotation={el.rotation || 0}
               />
             )
           case "dotted-line":
@@ -237,6 +271,8 @@ export const DrillStage = React.forwardRef<any, DrillStageProps>(function DrillS
                 stroke={color}
                 strokeWidth={3}
                 dash={[6, 6]}
+                hitStrokeWidth={12}
+                rotation={el.rotation || 0}
               />
             )
           case "curved-line":
@@ -249,6 +285,8 @@ export const DrillStage = React.forwardRef<any, DrillStageProps>(function DrillS
                 strokeWidth={3}
                 tension={0.5}
                 bezier={true}
+                hitStrokeWidth={12}
+                rotation={el.rotation || 0}
               />
             )
           default:
@@ -278,7 +316,21 @@ export const DrillStage = React.forwardRef<any, DrillStageProps>(function DrillS
 
   return (
     <div ref={(node)=>{ if(node) drop(node); }} className={isOver ? "ring-2 ring-yellow-400 rounded-lg" : ""}>
-      <Stage ref={(node)=>{stageRef.current=node; if(externalRef){ if(typeof externalRef==='function'){externalRef(node);} else {externalRef.current=node}} }} width={width} height={height} className="border rounded-lg shadow" tabIndex={0} onClick={() => onSelectionChange([])}>
+      <Stage
+        ref={(node)=>{stageRef.current=node; if(externalRef){ if(typeof externalRef==='function'){externalRef(node);} else {externalRef.current=node}} }}
+        width={width}
+        height={height}
+        className="border rounded-lg shadow"
+        tabIndex={0}
+        onClick={(e:any)=>{
+          // Only clear selection when clicking on empty stage
+          const stage = e.target.getStage()
+          if(e.target === stage){
+            onSelectionChange([])
+            setShowTransformer(false)
+          }
+        }}
+      >
       {/* Background */}
       <Layer listening={false}>
         {fieldImage && <KonvaImage image={fieldImage} width={width} height={height} />}
@@ -287,8 +339,42 @@ export const DrillStage = React.forwardRef<any, DrillStageProps>(function DrillS
       {/* Elements */}
       <Layer>
         {elements.map((el) => renderElement(el))}
-        {/* Transformer for selected nodes */}
-        <Transformer ref={transformerRef} rotateEnabled={false} />
+        {/* Transformer for movement elements */}
+        <Transformer
+          ref={movementTransformerRef}
+          rotationEnabled={true}
+          resizeEnabled={true}
+          enabledAnchors={["middle-left","middle-right","top-center","bottom-center"]}
+          boundBoxFunc={(oldBox, newBox)=>{
+            // prevent negative width
+            if(newBox.width<5){ return oldBox }
+            return newBox
+          }}
+          onTransformEnd={(e:any)=>{
+            const node = e.target as any // Transformer
+            const nodes = node.nodes() || []
+            nodes.forEach((n:any)=>{
+              let foundId: string | null = null
+              nodeRefs.current.forEach((val,key)=>{ if(val===n){ foundId=key }})
+              if(!foundId) return
+              const id = foundId
+              const el = elements.find((el)=>el.id===id)
+              if(!el) return
+
+              const scaleX = n.scaleX()
+              const rotation = n.rotation()
+
+              n.scale({x:1,y:1})
+
+              // update size proportional to horizontal scale only (scaleX)
+              const newSize = (el.size || 1) * scaleX
+
+              onUpdateElement(id,{size:newSize,rotation})
+            })
+            node.getLayer()?.batchDraw()
+            setShowTransformer(false)
+          }}
+        />
       </Layer>
       </Stage>
     </div>
