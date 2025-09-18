@@ -74,7 +74,7 @@ export default function BuildDrillPage() {
         ...prev,
         [idx]: {
           ...prev[idx],
-          [element.subType]: (prev[idx]?.[element.subType] || 0) + 1,
+          player: (prev[idx]?.player || 0) + 1,
         },
       }))
     }
@@ -104,7 +104,7 @@ export default function BuildDrillPage() {
         ...prev,
         [currentFrameIndex]: {
           ...prev[currentFrameIndex],
-          [elementToRemove.subType]: Math.max(0, (prev[currentFrameIndex]?.[elementToRemove.subType] || 1) - 1),
+          player: Math.max(0, (prev[currentFrameIndex]?.player || 1) - 1),
         },
       }))
     }
@@ -122,7 +122,7 @@ export default function BuildDrillPage() {
 
     elementsToRemove.forEach((element) => {
       if (element.type === "player" && element.subType !== "coach") {
-        playerUpdates[element.subType] = (playerUpdates[element.subType] || 0) + 1
+        playerUpdates.player = (playerUpdates.player || 0) + 1
       }
     })
 

@@ -28,11 +28,17 @@ export function Toolbox({
   const [presetColor, setPresetColor] = useState("#ef4444")
   const [showPresets, setShowPresets] = useState(false)
 
+  // Single generic player; all styling comes from presets.
   const playerItems = [
-    { type: "player", subType: "player1", color: presetColor, label: (playerCounters.player1 || 0) + 1 },
-    { type: "player", subType: "player2", color: "#3b82f6", label: (playerCounters.player2 || 0) + 1 },
-    { type: "player", subType: "player3", color: "#22c55e", label: (playerCounters.player3 || 0) + 1 },
-    { type: "player", subType: "coach", color: "#000000", label: "C" },
+    {
+      type: "player",
+      subType: "player", // generic identifier
+      color: presetColor,
+      label: (playerCounters.player || 0) + 1,
+      size: presetSize,
+    },
+    // Coach keeps as separate element with fixed style if desired
+    { type: "player", subType: "coach", color: "#000000", label: "C", size: presetSize },
   ]
 
   const equipmentItems = [
