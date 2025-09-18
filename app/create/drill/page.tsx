@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Sidebar } from "@/components/layout/sidebar"
 import { Header } from "@/components/layout/header"
 import { DrillStage } from "@/components/drill-builder/drill-stage"
@@ -9,6 +9,7 @@ import { DrillForm } from "@/components/drill-builder/drill-form"
 import { FrameControls } from "@/components/drill-builder/frame-controls"
 import { DndProvider } from "react-dnd"
 import { HTML5Backend } from "react-dnd-html5-backend"
+import { useRef } from "react"
 
 export interface DrillElement {
   id: string
@@ -30,7 +31,12 @@ export interface DrillFrame {
 
 export default function BuildDrillPage() {
   const [frames, setFrames] = useState<DrillFrame[]>([{ id: "frame-1", name: "Frame 1", elements: [] }])
+  const stageRef = useRef<any>(null)
   const [currentFrameIndex, setCurrentFrameIndex] = useState(0)
+  const currentFrameRef = useRef(0)
+  useEffect(() => {
+    currentFrameRef.current = currentFrameIndex
+  }, [currentFrameIndex])
   const [selectedElements, setSelectedElements] = useState<string[]>([])
   const [playerCounters, setPlayerCounters] = useState<{ [frameIndex: number]: { [key: string]: number } }>({})
 
@@ -61,22 +67,21 @@ export default function BuildDrillPage() {
       size: element.size || 1, // Use provided size or default to 1
     }
 
-    console.log("[v0] Adding element to frame:", currentFrameIndex, "Frame name:", frames[currentFrameIndex].name)
+    const idx = currentFrameRef.current
+    console.log("[v0] Adding element to frame:", idx, "Frame name:", frames[idx].name)
 
     if (element.type === "player" && element.subType !== "coach") {
       setPlayerCounters((prev) => ({
         ...prev,
-        [currentFrameIndex]: {
-          ...prev[currentFrameIndex],
-          [element.subType]: (prev[currentFrameIndex]?.[element.subType] || 0) + 1,
+        [idx]: {
+          ...prev[idx],
+          [element.subType]: (prev[idx]?.[element.subType] || 0) + 1,
         },
       }))
     }
 
     setFrames((prevFrames) =>
-      prevFrames.map((frame, index) =>
-        index === currentFrameIndex ? { ...frame, elements: [...frame.elements, newElement] } : frame,
-      ),
+      prevFrames.map((frame, index) => (index === idx ? { ...frame, elements: [...frame.elements, newElement] } : frame)),
     )
   }
 
@@ -220,10 +225,13 @@ export default function BuildDrillPage() {
     setFrames((prevFrames) => prevFrames.map((frame, index) => (index === frameIndex ? { ...frame, name } : frame)))
   }
 
-  const downloadAllFrames = () => {
-    // This would typically generate PDFs or images of all frames
-    console.log("Downloading all frames:", frames)
-    alert(`Downloading ${frames.length} frames as PDF...`)
+  const downloadAllFrames = async () => {
+    if (!stageRef.current) return
+    const dataURL = stageRef.current.toDataURL({ pixelRatio: 2 })
+    const link = document.createElement("a")
+    link.download = `${currentFrame.name.replace(/\s+/g, "_")}.png`
+    link.href = dataURL
+    link.click()
   }
 
   const getSelectedElement = () => {
@@ -295,6 +303,7 @@ export default function BuildDrillPage() {
                 {/* Canvas */}
                 <div className="flex-1 min-w-0">
                   <DrillStage
+                    ref={stageRef}
                     elements={currentFrame.elements}
                     selectedElements={selectedElements}
                     onAddElement={addElement}

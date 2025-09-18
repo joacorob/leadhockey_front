@@ -14,7 +14,7 @@ interface DrillStageProps {
   onMoveSelected: (dx: number, dy: number) => void
 }
 
-export function DrillStage({
+export const DrillStage = React.forwardRef<any, DrillStageProps>(function DrillStage({
   elements,
   selectedElements,
   onAddElement,
@@ -22,7 +22,7 @@ export function DrillStage({
   onRemoveElement,
   onSelectionChange,
   onMoveSelected,
-}: DrillStageProps) {
+}: DrillStageProps, externalRef) {
   // Load field image once
   const [fieldImage] = useImage("/field_drag.png")
 
@@ -47,34 +47,37 @@ export function DrillStage({
   // For group dragging delta calculations
   const dragAnchor = React.useRef<{ x: number; y: number } | null>(null)
 
-  const [{ isOver }, drop] = useDrop(() => ({
-    accept: "drill-item",
-    drop: (item: any, monitor) => {
-      if (!stageRef.current) return
-      const client = monitor.getClientOffset()
-      if (!client) return
+  const [{ isOver }, drop] = useDrop(
+    () => ({
+      accept: "drill-item",
+      drop: (item: any, monitor) => {
+        if (!stageRef.current) return
+        const client = monitor.getClientOffset()
+        if (!client) return
 
-      // Calculate coordinates relative to stage top-left
-      const rect = stageRef.current.container().getBoundingClientRect()
-      const x = client.x - rect.left
-      const y = client.y - rect.top
+        // Calculate coordinates relative to stage top-left
+        const rect = stageRef.current.container().getBoundingClientRect()
+        const x = client.x - rect.left
+        const y = client.y - rect.top
 
-      console.log("Drop item", item)
-      onAddElement({
-        type: item.type,
-        subType: item.subType,
-        x,
-        y,
-        color: item.color,
-        size: item.size,
-        label: item.label,
-        text: item.label === "Text" ? "Sample Text" : item.label === "Note" ? "Note" : undefined,
-      })
-    },
-    collect: (monitor) => ({
-      isOver: monitor.isOver(),
+        console.log("Drop item", item)
+        onAddElement({
+          type: item.type,
+          subType: item.subType,
+          x,
+          y,
+          color: item.color,
+          size: item.size,
+          label: item.label,
+          text: item.label === "Text" ? "Sample Text" : item.label === "Note" ? "Note" : undefined,
+        })
+      },
+      collect: (monitor) => ({
+        isOver: monitor.isOver(),
+      }),
     }),
-  }))
+    [onAddElement],
+  )
 
   const handleDragEnd = (id: string, e: any) => {
     const { x, y } = e.target.position()
@@ -274,8 +277,8 @@ export function DrillStage({
   }
 
   return (
-    <div ref={drop} className={isOver ? "ring-2 ring-yellow-400 rounded-lg" : ""}>
-      <Stage ref={stageRef} width={width} height={height} className="border rounded-lg shadow" tabIndex={0} onClick={() => onSelectionChange([])}>
+    <div ref={(node)=>{ if(node) drop(node); }} className={isOver ? "ring-2 ring-yellow-400 rounded-lg" : ""}>
+      <Stage ref={(node)=>{stageRef.current=node; if(externalRef){ if(typeof externalRef==='function'){externalRef(node);} else {externalRef.current=node}} }} width={width} height={height} className="border rounded-lg shadow" tabIndex={0} onClick={() => onSelectionChange([])}>
       {/* Background */}
       <Layer listening={false}>
         {fieldImage && <KonvaImage image={fieldImage} width={width} height={height} />}
@@ -290,4 +293,4 @@ export function DrillStage({
       </Stage>
     </div>
   )
-}
+})
