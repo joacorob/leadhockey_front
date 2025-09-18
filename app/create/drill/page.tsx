@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Sidebar } from "@/components/layout/sidebar"
 import { Header } from "@/components/layout/header"
 import { DrillStage } from "@/components/drill-builder/drill-stage"
@@ -9,7 +9,6 @@ import { DrillForm } from "@/components/drill-builder/drill-form"
 import { FrameControls } from "@/components/drill-builder/frame-controls"
 import { DndProvider } from "react-dnd"
 import { HTML5Backend } from "react-dnd-html5-backend"
-import { useRef } from "react"
 
 export interface DrillElement {
   id: string
@@ -226,12 +225,24 @@ export default function BuildDrillPage() {
   }
 
   const downloadAllFrames = async () => {
-    if (!stageRef.current) return
-    const dataURL = stageRef.current.toDataURL({ pixelRatio: 2 })
-    const link = document.createElement("a")
-    link.download = `${currentFrame.name.replace(/\s+/g, "_")}.png`
-    link.href = dataURL
-    link.click()
+    // @ts-ignore – jsPDF is imported dynamically at runtime
+    const { jsPDF } = await import("jspdf")
+    const pdf = new jsPDF({ orientation: "landscape", unit: "px", format: [900, 600] })
+
+    const originalIndex = currentFrameRef.current
+
+    for (let i = 0; i < frames.length; i++) {
+      setCurrentFrameIndex(i)
+      await new Promise((res) => setTimeout(res, 50)) // wait for Stage to render
+      const url = stageRef.current.toDataURL({ pixelRatio: 2 })
+      if (i > 0) pdf.addPage()
+      pdf.addImage(url, "PNG", 0, 0, 900, 600)
+    }
+
+    // restore original frame
+    setCurrentFrameIndex(originalIndex)
+
+    pdf.save("training_frames.pdf")
   }
 
   const getSelectedElement = () => {
