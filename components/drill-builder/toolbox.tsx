@@ -24,20 +24,47 @@ export function Toolbox({
   playerCounters = {},
   onUpdatePlayerCounters,
 }: ToolboxProps) {
-  const [presetSize, setPresetSize] = useState(1)
-  const [presetColor, setPresetColor] = useState("#ef4444")
+  // Which team icon is currently being configured in the presets panel
+  const [activePlayer, setActivePlayer] = useState<"team1" | "team2">("team1")
+
+  // Independent presets for each team
+  const [playerPresets, setPlayerPresets] = useState({
+    team1: { size: 1, color: "#ef4444" }, // red default
+    team2: { size: 1, color: "#3b82f6" }, // blue default
+  })
+
   const [showPresets, setShowPresets] = useState(false)
 
-  // Single generic player; all styling comes from presets.
+  // Convenience getters for currently active team preset
+  const presetSize = playerPresets[activePlayer].size
+  const presetColor = playerPresets[activePlayer].color
+
+  const updateActivePreset = (updates: Partial<{ size: number; color: string }>) => {
+    setPlayerPresets((prev) => ({
+      ...prev,
+      [activePlayer]: {
+        ...prev[activePlayer],
+        ...updates,
+      },
+    }))
+  }
+
+  // Two separate teams so each keeps its own numbering.
   const playerItems = [
     {
       type: "player",
-      subType: "player", // generic identifier
-      color: presetColor,
-      label: (playerCounters.player || 0) + 1,
-      size: presetSize,
+      subType: "team1",
+      color: playerPresets.team1.color,
+      label: (playerCounters.team1 || 0) + 1,
+      size: playerPresets.team1.size,
     },
-    // Coach keeps as separate element with fixed style if desired
+    {
+      type: "player",
+      subType: "team2",
+      color: playerPresets.team2.color,
+      label: (playerCounters.team2 || 0) + 1,
+      size: playerPresets.team2.size,
+    },
     { type: "player", subType: "coach", color: "#000000", label: "C", size: presetSize },
   ]
 
@@ -96,11 +123,11 @@ export function Toolbox({
   }
 
   const handlePresetSizeChange = (value: number[]) => {
-    setPresetSize(value[0])
+    updateActivePreset({ size: value[0] })
   }
 
   const handlePresetColorChange = (color: string) => {
-    setPresetColor(color)
+    updateActivePreset({ color })
   }
 
   return (
@@ -230,21 +257,22 @@ export function Toolbox({
           <h3 className="text-xs font-medium text-gray-700 mb-3 uppercase tracking-wide">PLAYERS</h3>
           <div className="flex gap-2">
             {playerItems.map((item, index) => (
-              <DraggableItem
-                key={index}
-                type={item.type}
-                subType={item.subType}
-                color={item.color}
-                label={item.label.toString()}
-                size={presetSize}
-              >
-                <div
-                  className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold cursor-grab active:cursor-grabbing"
-                  style={{ backgroundColor: item.color }}
+              <div key={index} onClick={() => setActivePlayer(item.subType as "team1" | "team2")} className={activePlayer===item.subType?"ring-2 ring-yellow-400 rounded-full":""}>
+                <DraggableItem
+                  type={item.type}
+                  subType={item.subType}
+                  color={item.color}
+                  label={item.label.toString()}
+                  size={item.size}
                 >
-                  {item.label}
-                </div>
-              </DraggableItem>
+                  <div
+                    className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold cursor-grab active:cursor-grabbing"
+                    style={{ backgroundColor: item.color }}
+                  >
+                    {item.label}
+                  </div>
+                </DraggableItem>
+              </div>
             ))}
           </div>
         </div>

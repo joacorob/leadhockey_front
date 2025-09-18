@@ -70,11 +70,12 @@ export default function BuildDrillPage() {
     console.log("[v0] Adding element to frame:", idx, "Frame name:", frames[idx].name)
 
     if (element.type === "player" && element.subType !== "coach") {
+      const key = element.subType // team1 or team2
       setPlayerCounters((prev) => ({
         ...prev,
         [idx]: {
           ...prev[idx],
-          player: (prev[idx]?.player || 0) + 1,
+          [key]: (prev[idx]?.[key] || 0) + 1,
         },
       }))
     }
@@ -100,11 +101,12 @@ export default function BuildDrillPage() {
   const removeElement = (id: string) => {
     const elementToRemove = currentFrame.elements.find((el) => el.id === id)
     if (elementToRemove && elementToRemove.type === "player" && elementToRemove.subType !== "coach") {
+      const key = elementToRemove.subType
       setPlayerCounters((prev) => ({
         ...prev,
         [currentFrameIndex]: {
           ...prev[currentFrameIndex],
-          player: Math.max(0, (prev[currentFrameIndex]?.player || 1) - 1),
+          [key]: Math.max(0, (prev[currentFrameIndex]?.[key] || 1) - 1),
         },
       }))
     }
@@ -122,7 +124,7 @@ export default function BuildDrillPage() {
 
     elementsToRemove.forEach((element) => {
       if (element.type === "player" && element.subType !== "coach") {
-        playerUpdates.player = (playerUpdates.player || 0) + 1
+        playerUpdates[element.subType] = (playerUpdates[element.subType] || 0) + 1
       }
     })
 
