@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/nextjs';
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
@@ -12,10 +13,15 @@ const inter = Inter({
   display: 'swap',
 })
 
-export const metadata: Metadata = {
-  title: 'LEAD Hockey - Training Platform',
-  description: 'Professional hockey training platform with video sessions and drills',
-    generator: 'v0.app'
+export function generateMetadata(): Metadata {
+  return {
+    title: 'LEAD Hockey - Training Platform',
+    description: 'Professional hockey training platform with video sessions and drills',
+    generator: 'v0.app',
+    other: {
+      ...Sentry.getTraceData()
+    }
+  };
 }
 
 export default async function RootLayout({
