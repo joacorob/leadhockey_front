@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import type { DrillFrame } from "@/app/create/drill/page"
-import { Plus, Copy, Trash2, Download, Play, Pause, SkipBack, SkipForward } from "lucide-react"
+import { Plus, Copy, Trash2, Download, Play, Pause, SkipBack, SkipForward, Pencil } from "lucide-react"
 import { useState } from "react"
 
 interface FrameControlsProps {
@@ -220,9 +220,24 @@ export function FrameControls({
                   onFocus={(e) => e.target.select()}
                 />
               ) : (
-                <span className="text-xs font-medium truncate" onDoubleClick={() => setEditingFrame(index)}>
-                  {frame.name}
-                </span>
+                <div className="flex items-center gap-1">
+                  <span
+                    className="text-xs font-medium truncate"
+                    onDoubleClick={() => setEditingFrame(index)}
+                  >
+                    {frame.name}
+                  </span>
+                  <button
+                    className="p-0 m-0 text-gray-500 hover:text-gray-700"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setEditingFrame(index)
+                    }}
+                    title="Rename"
+                  >
+                    <Pencil className="w-3 h-3" />
+                  </button>
+                </div>
               )}
 
               <span className="text-xs text-gray-500">({frame.elements.length})</span>
