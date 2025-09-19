@@ -249,6 +249,44 @@ export default function BuildDrillPage() {
     pdf.save("training_frames.pdf")
   }
 
+  // === GIF EXPORT ===
+  const exportGif = async () => {
+    const gifshot = await import("gifshot")
+    const delay = 0.2 // seconds per frame
+
+    // helper to render frame to dataURL
+    const renderFrame = async (index: number) => {
+      setCurrentFrameIndex(index)
+      await new Promise((res) => setTimeout(res, 30))
+      return stageRef.current.toDataURL({ pixelRatio: 2 })
+    }
+
+    const images: string[] = []
+
+    for (let i = 0; i < frames.length; i++) {
+      images.push(await renderFrame(i))
+    }
+
+    gifshot.default.createGIF(
+      {
+        images,
+        interval: delay,
+        gifWidth: 900,
+        gifHeight: 600,
+      },
+      (obj: any) => {
+        if (!obj.error) {
+          const link = document.createElement("a")
+          link.href = obj.image
+          link.download = "training_frames.gif"
+          link.click()
+        } else {
+          console.error("GIF generation error", obj.error)
+        }
+      },
+    )
+  }
+
   const getSelectedElement = () => {
     if (selectedElements.length === 1) {
       return currentFrame.elements.find((el) => el.id === selectedElements[0])
@@ -293,6 +331,7 @@ export default function BuildDrillPage() {
                 onRemoveFrame={removeFrame}
                 onUpdateFrameName={updateFrameName}
                 onDownloadAll={downloadAllFrames}
+                onExportGif={exportGif}
                 selectedCount={selectedElements.length}
                 onDeleteSelected={removeSelectedElements}
               />

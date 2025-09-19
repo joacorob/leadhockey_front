@@ -37,6 +37,12 @@ export const DrillStage = React.forwardRef<any, DrillStageProps>(function DrillS
   const transformerRef = React.useRef<any>(null)
   // Separate transformer for movement elements to control resize & rotate
   const movementTransformerRef = React.useRef<any>(null)
+  // expose nodeRefs via stageRef for external access (e.g., GIF export)
+  React.useEffect(() => {
+    if (stageRef.current) {
+      ;(stageRef.current as any).nodeRefs = nodeRefs.current
+    }
+  }, [elements])
   // Flag to show transformer explicitly via double-click
   const [showTransformer, setShowTransformer] = React.useState(false)
 
@@ -351,8 +357,9 @@ export const DrillStage = React.forwardRef<any, DrillStageProps>(function DrillS
             return newBox
           }}
           onTransformEnd={(e:any)=>{
-            const node = e.target as any // Transformer
-            const nodes = node.nodes() || []
+            const tr = movementTransformerRef.current
+            if(!tr) return
+            const nodes = tr.nodes() || []
             nodes.forEach((n:any)=>{
               let foundId: string | null = null
               nodeRefs.current.forEach((val,key)=>{ if(val===n){ foundId=key }})
@@ -371,7 +378,7 @@ export const DrillStage = React.forwardRef<any, DrillStageProps>(function DrillS
 
               onUpdateElement(id,{size:newSize,rotation})
             })
-            node.getLayer()?.batchDraw()
+            tr.getLayer()?.batchDraw()
             setShowTransformer(false)
           }}
         />

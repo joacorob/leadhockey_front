@@ -16,6 +16,7 @@ interface FrameControlsProps {
   onRemoveFrame: (index: number) => void
   onUpdateFrameName: (index: number, name: string) => void
   onDownloadAll: () => void
+  onExportGif: () => void
   selectedCount: number
   onDeleteSelected: () => void
 }
@@ -31,6 +32,7 @@ export function FrameControls({
   onDownloadAll,
   selectedCount,
   onDeleteSelected,
+  onExportGif,
 }: FrameControlsProps) {
   const [isPlaying, setIsPlaying] = useState(false)
   const [editingFrame, setEditingFrame] = useState<number | null>(null)
@@ -113,6 +115,11 @@ export function FrameControls({
             <Button variant="default" size="sm" onClick={onDownloadAll}>
               <Download className="w-4 h-4 mr-1" />
               Download All
+            </Button>
+
+            <Button variant="default" size="sm" onClick={onExportGif}>
+              <Download className="w-4 h-4 mr-1" />
+              Export GIF
             </Button>
           </div>
         </div>
