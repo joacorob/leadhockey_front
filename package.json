@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "postinstall": "cp node_modules/gif.js/dist/gif.worker.js public/gif.worker.js || true",
     "build": "next build",
     "dev": "PORT=3011 next dev",
     "lint": "next lint",
@@ -73,7 +74,7 @@
     "vaul": "^0.9.6",
     "video.js": "^8.12.0",
     "zod": "^3.24.1",
-    "gifshot": "^0.3.2"
+    "gif.js": "^0.2.0"
   },
   "devDependencies": {
     "@types/node": "^22",

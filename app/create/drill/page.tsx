@@ -265,9 +265,10 @@ export default function BuildDrillPage() {
 
   // === GIF EXPORT ===
   const exportGif = async ({ delay, width }: { delay: number; width: number }) => {
-    const gifshot = await import("gifshot")
+    // Uso la versión browser que embebe el worker, así evitamos problemas de CORS
+    // @ts-ignore – librería no tiene tipos
+    const { default: GIF } = await import("gif.js")
     const steps = 10 // interpolation steps between keyframes
-    const interval = (delay / steps) / 1000 // seconds per interpolated step
     const aspect = 600 / 900
     const gifWidth = width
     const gifHeight = Math.round(width * aspect)
@@ -279,17 +280,15 @@ export default function BuildDrillPage() {
 
     const originalFrames = JSON.parse(JSON.stringify(frames)) as DrillFrame[]
 
-    const images: string[] = []
+    const framesData: { src: string; d: number }[] = []
 
     for (let i = 0; i < frames.length; i++) {
-      // show keyframe i
       setCurrentFrameIndex(i)
-      images.push(await renderSnapshot())
+      framesData.push({ src: await renderSnapshot(), d: delay })
 
       const next = frames[i + 1]
       if (!next) break
 
-      // maps for easy lookup
       const startMap: Record<string, DrillElement> = {}
       frames[i].elements.forEach((el) => (startMap[el.id] = el))
       const endMap: Record<string, DrillElement> = {}
@@ -308,33 +307,35 @@ export default function BuildDrillPage() {
           }
         })
 
-        // temporarily update frame i for rendering
-        setFrames((prev) =>
-          prev.map((f, idx) => (idx === i ? { ...f, elements: interpElements } : f)),
-        )
-        images.push(await renderSnapshot())
+        setFrames((prev) => prev.map((f, idx) => (idx === i ? { ...f, elements: interpElements } : f)))
+        framesData.push({ src: await renderSnapshot(), d: delay / steps })
       }
     }
 
-    // restore original frames
     setFrames(originalFrames)
 
-    gifshot.default.createGIF(
-      {
-        images,
-        interval,
-        gifWidth,
-        gifHeight,
-        repeat: 1,
-      },
-      (obj: any) => {
-        if (!obj.error) {
-          setGifUrl(obj.image)
-        } else {
-          console.error("GIF generation error", obj.error)
-        }
-      },
-    )
+    const gif = new GIF({
+      workerScript: "/gif.worker.js",
+      repeat: -1, // no loop
+    })
+
+    const loadImage = (src: string): Promise<HTMLImageElement> =>
+      new Promise((resolve) => {
+        const img = new Image()
+        img.onload = () => resolve(img)
+        img.src = src
+      })
+
+    for (const { src, d } of framesData) {
+      const imgEl = await loadImage(src)
+      gif.addFrame(imgEl, { delay: d, copy: true })
+    }
+
+    gif.on("finished", (blob: Blob) => {
+      setGifUrl(URL.createObjectURL(blob))
+    })
+
+    gif.render()
   }
 
   const getSelectedElement = () => {
