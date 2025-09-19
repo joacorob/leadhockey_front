@@ -437,7 +437,8 @@ export default function BuildDrillPage() {
             <DialogTitle>Preview GIF</DialogTitle>
           </DialogHeader>
           {gifUrl && (
-            <img key={gifUrl + playKey}
+            <img
+              key={playKey}
               src={gifUrl}
               alt="Drill animation"
               className="w-full h-auto"

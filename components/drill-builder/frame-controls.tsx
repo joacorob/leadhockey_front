@@ -42,7 +42,7 @@ export function FrameControls({
 }: FrameControlsProps) {
   const [isPlaying, setIsPlaying] = useState(false)
   const [showGifOpts, setShowGifOpts] = useState(false)
-  const [gifDelay, setGifDelay] = useState(200)
+  const [gifDelay, setGifDelay] = useState(800)
   const [gifWidth, setGifWidth] = useState(900)
   const [editingFrame, setEditingFrame] = useState<number | null>(null)
 
