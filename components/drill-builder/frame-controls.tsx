@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import type { DrillFrame } from "@/app/create/drill/page"
-import { Plus, Copy, Trash2, Download, Play, Pause, SkipBack, SkipForward } from "lucide-react"
+import { Plus, Copy, Trash2, Download, Play, Pause, SkipBack, SkipForward, Pencil } from "lucide-react"
 import { useState } from "react"
 
 interface FrameControlsProps {
@@ -16,8 +16,12 @@ interface FrameControlsProps {
   onRemoveFrame: (index: number) => void
   onUpdateFrameName: (index: number, name: string) => void
   onDownloadAll: () => void
+  onExportGif: (opts: { delay: number; width: number }) => void
   selectedCount: number
   onDeleteSelected: () => void
+  gifUrl?: string | null
+  onViewGif?: () => void
+  isGeneratingGif?: boolean
 }
 
 export function FrameControls({
@@ -31,8 +35,15 @@ export function FrameControls({
   onDownloadAll,
   selectedCount,
   onDeleteSelected,
+  onExportGif,
+  gifUrl,
+  onViewGif,
+  isGeneratingGif,
 }: FrameControlsProps) {
   const [isPlaying, setIsPlaying] = useState(false)
+  const [showGifOpts, setShowGifOpts] = useState(false)
+  const [gifDelay, setGifDelay] = useState(800)
+  const [gifWidth, setGifWidth] = useState(900)
   const [editingFrame, setEditingFrame] = useState<number | null>(null)
 
   const playFrames = () => {
@@ -114,8 +125,71 @@ export function FrameControls({
               <Download className="w-4 h-4 mr-1" />
               Download All
             </Button>
+
+            <Button variant="default" size="sm" onClick={() => setShowGifOpts(!showGifOpts)}>
+              <Download className="w-4 h-4 mr-1" />
+              GIF Options
+            </Button>
           </div>
         </div>
+      {showGifOpts && (
+        <div className="border-t pt-4 mt-4 grid grid-cols-2 gap-4">
+          <div>
+            <label className="text-xs text-gray-600 mb-1 block">Delay per frame (ms)</label>
+            <Input
+              type="number"
+              value={gifDelay}
+              min={50}
+              onChange={(e) => setGifDelay(parseInt(e.target.value, 10) || 0)}
+              className="h-8 text-xs"
+            />
+          </div>
+          <div>
+            <label className="text-xs text-gray-600 mb-1 block">Width (px)</label>
+            <Input
+              type="number"
+              value={gifWidth}
+              min={100}
+              onChange={(e) => setGifWidth(parseInt(e.target.value, 10) || 0)}
+              className="h-8 text-xs"
+            />
+          </div>
+          <div className="col-span-2 flex justify-end gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setShowGifOpts(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="default"
+              size="sm"
+              onClick={() => {
+                onExportGif({ delay: gifDelay, width: gifWidth })
+              }}
+              disabled={isGeneratingGif}
+            >
+              {isGeneratingGif ? (
+                <span className="flex items-center gap-1"><svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/></svg> Generating...</span>
+              ) : (
+                'Generate GIF'
+              )}
+            </Button>
+
+            {gifUrl && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={onViewGif}
+              >
+                <Play className="w-4 h-4 mr-1" />
+                Play GIF
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
 
         {/* Frame Tabs */}
         <div className="flex gap-2 overflow-x-auto pb-2">
@@ -146,9 +220,24 @@ export function FrameControls({
                   onFocus={(e) => e.target.select()}
                 />
               ) : (
-                <span className="text-xs font-medium truncate" onDoubleClick={() => setEditingFrame(index)}>
-                  {frame.name}
-                </span>
+                <div className="flex items-center gap-1">
+                  <span
+                    className="text-xs font-medium truncate"
+                    onDoubleClick={() => setEditingFrame(index)}
+                  >
+                    {frame.name}
+                  </span>
+                  <button
+                    className="p-0 m-0 text-gray-500 hover:text-gray-700"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setEditingFrame(index)
+                    }}
+                    title="Rename"
+                  >
+                    <Pencil className="w-3 h-3" />
+                  </button>
+                </div>
               )}
 
               <span className="text-xs text-gray-500">({frame.elements.length})</span>

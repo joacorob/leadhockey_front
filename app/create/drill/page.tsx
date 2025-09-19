@@ -1,14 +1,23 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Sidebar } from "@/components/layout/sidebar"
 import { Header } from "@/components/layout/header"
-import { DrillCanvas } from "@/components/drill-builder/drill-canvas"
+import { DrillStage } from "@/components/drill-builder/drill-stage"
 import { Toolbox } from "@/components/drill-builder/toolbox"
 import { DrillForm } from "@/components/drill-builder/drill-form"
 import { FrameControls } from "@/components/drill-builder/frame-controls"
 import { DndProvider } from "react-dnd"
 import { HTML5Backend } from "react-dnd-html5-backend"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button"
 
 export interface DrillElement {
   id: string
@@ -20,6 +29,7 @@ export interface DrillElement {
   label?: string
   text?: string
   size?: number // Added size property for element scaling
+  rotation?: number // Added rotation property for element orientation
 }
 
 export interface DrillFrame {
@@ -30,9 +40,21 @@ export interface DrillFrame {
 
 export default function BuildDrillPage() {
   const [frames, setFrames] = useState<DrillFrame[]>([{ id: "frame-1", name: "Frame 1", elements: [] }])
+  const stageRef = useRef<any>(null)
   const [currentFrameIndex, setCurrentFrameIndex] = useState(0)
+  const currentFrameRef = useRef(0)
+  useEffect(() => {
+    currentFrameRef.current = currentFrameIndex
+  }, [currentFrameIndex])
   const [selectedElements, setSelectedElements] = useState<string[]>([])
   const [playerCounters, setPlayerCounters] = useState<{ [frameIndex: number]: { [key: string]: number } }>({})
+  const [gifUrl, setGifUrl] = useState<string | null>(null)
+  const [isGifModalOpen, setGifModalOpen] = useState(false)
+  const [isGeneratingGif, setGeneratingGif] = useState(false)
+  const [playKey, setPlayKey] = useState(0)
+  const [gifLoaded, setGifLoaded] = useState(false)
+
+  const handleViewGif = () => setGifModalOpen(true)
 
   const [drillData, setDrillData] = useState({
     title: "New Training Session",
@@ -59,24 +81,25 @@ export default function BuildDrillPage() {
       ...element,
       id: `${element.type}-${Date.now()}-${Math.random()}`,
       size: element.size || 1, // Use provided size or default to 1
+      rotation: 0,
     }
 
-    console.log("[v0] Adding element to frame:", currentFrameIndex, "Frame name:", frames[currentFrameIndex].name)
+    const idx = currentFrameRef.current
+    console.log("[v0] Adding element to frame:", idx, "Frame name:", frames[idx].name)
 
     if (element.type === "player" && element.subType !== "coach") {
+      const key = element.subType // team1 or team2
       setPlayerCounters((prev) => ({
         ...prev,
-        [currentFrameIndex]: {
-          ...prev[currentFrameIndex],
-          [element.subType]: (prev[currentFrameIndex]?.[element.subType] || 0) + 1,
+        [idx]: {
+          ...prev[idx],
+          [key]: (prev[idx]?.[key] || 0) + 1,
         },
       }))
     }
 
     setFrames((prevFrames) =>
-      prevFrames.map((frame, index) =>
-        index === currentFrameIndex ? { ...frame, elements: [...frame.elements, newElement] } : frame,
-      ),
+      prevFrames.map((frame, index) => (index === idx ? { ...frame, elements: [...frame.elements, newElement] } : frame)),
     )
   }
 
@@ -96,18 +119,20 @@ export default function BuildDrillPage() {
   const removeElement = (id: string) => {
     const elementToRemove = currentFrame.elements.find((el) => el.id === id)
     if (elementToRemove && elementToRemove.type === "player" && elementToRemove.subType !== "coach") {
+      const key = elementToRemove.subType
       setPlayerCounters((prev) => ({
         ...prev,
         [currentFrameIndex]: {
           ...prev[currentFrameIndex],
-          [elementToRemove.subType]: Math.max(0, (prev[currentFrameIndex]?.[elementToRemove.subType] || 1) - 1),
+          [key]: Math.max(0, (prev[currentFrameIndex]?.[key] || 1) - 1),
         },
       }))
     }
 
+    // remove from current and subsequent frames to maintain consistency
     setFrames((prevFrames) =>
       prevFrames.map((frame, index) =>
-        index === currentFrameIndex ? { ...frame, elements: frame.elements.filter((el) => el.id !== id) } : frame,
+        index >= currentFrameIndex ? { ...frame, elements: frame.elements.filter((el) => el.id !== id) } : frame,
       ),
     )
   }
@@ -140,7 +165,7 @@ export default function BuildDrillPage() {
 
     setFrames((prevFrames) =>
       prevFrames.map((frame, index) =>
-        index === currentFrameIndex
+        index >= currentFrameIndex
           ? { ...frame, elements: frame.elements.filter((el) => !selectedElements.includes(el.id)) }
           : frame,
       ),
@@ -193,8 +218,7 @@ export default function BuildDrillPage() {
       id: `frame-${Date.now()}`,
       name: `${currentFrame.name} Copy`,
       elements: currentFrame.elements.map((el) => ({
-        ...el,
-        id: `${el.type}-${Date.now()}-${Math.random()}`,
+        ...el, // keep original id so element is the same across frames
       })),
     }
     setFrames([...frames, duplicatedFrame])
@@ -220,10 +244,102 @@ export default function BuildDrillPage() {
     setFrames((prevFrames) => prevFrames.map((frame, index) => (index === frameIndex ? { ...frame, name } : frame)))
   }
 
-  const downloadAllFrames = () => {
-    // This would typically generate PDFs or images of all frames
-    console.log("Downloading all frames:", frames)
-    alert(`Downloading ${frames.length} frames as PDF...`)
+  const downloadAllFrames = async () => {
+    // @ts-ignore – jsPDF is imported dynamically at runtime
+    const { jsPDF } = await import("jspdf")
+    const pdf = new jsPDF({ orientation: "landscape", unit: "px", format: [900, 600] })
+
+    const originalIndex = currentFrameRef.current
+
+    for (let i = 0; i < frames.length; i++) {
+      setCurrentFrameIndex(i)
+      await new Promise((res) => setTimeout(res, 50)) // wait for Stage to render
+      const url = stageRef.current.toDataURL({ pixelRatio: 2 })
+      if (i > 0) pdf.addPage()
+      pdf.addImage(url, "PNG", 0, 0, 900, 600)
+    }
+
+    // restore original frame
+    setCurrentFrameIndex(originalIndex)
+
+    pdf.save("training_frames.pdf")
+  }
+
+  // === GIF EXPORT ===
+  const exportGif = async ({ delay, width }: { delay: number; width: number }) => {
+    setGeneratingGif(true)
+    // Uso la versión browser que embebe el worker, así evitamos problemas de CORS
+    // @ts-ignore – librería no tiene tipos
+    const { default: GIF } = await import("gif.js")
+    const steps = 10 // interpolation steps between keyframes
+    const aspect = 600 / 900
+    const gifWidth = width
+    const gifHeight = Math.round(width * aspect)
+
+    const renderSnapshot = async () => {
+      await new Promise((res) => setTimeout(res, 30))
+      return stageRef.current.toDataURL({ pixelRatio: 2 })
+    }
+
+    const originalFrames = JSON.parse(JSON.stringify(frames)) as DrillFrame[]
+
+    const framesData: { src: string; d: number }[] = []
+
+    for (let i = 0; i < frames.length; i++) {
+      setCurrentFrameIndex(i)
+      framesData.push({ src: await renderSnapshot(), d: delay })
+
+      const next = frames[i + 1]
+      if (!next) break
+
+      const startMap: Record<string, DrillElement> = {}
+      frames[i].elements.forEach((el) => (startMap[el.id] = el))
+      const endMap: Record<string, DrillElement> = {}
+      next.elements.forEach((el) => (endMap[el.id] = el))
+
+      for (let s = 1; s < steps; s++) {
+        const t = s / steps
+        const interpElements: DrillElement[] = frames[i].elements.map((el) => {
+          const end = endMap[el.id] || el
+          return {
+            ...el,
+            x: el.x + (end.x - el.x) * t,
+            y: el.y + (end.y - el.y) * t,
+            rotation: (el.rotation || 0) + ((end.rotation || 0) - (el.rotation || 0)) * t,
+            size: (el.size || 1) + ((end.size || 1) - (el.size || 1)) * t,
+          }
+        })
+
+        setFrames((prev) => prev.map((f, idx) => (idx === i ? { ...f, elements: interpElements } : f)))
+        framesData.push({ src: await renderSnapshot(), d: delay / steps })
+      }
+    }
+
+    setFrames(originalFrames)
+
+    const gif = new GIF({
+      workerScript: "/gif.worker.js",
+      repeat: -1, // no loop
+    })
+
+    const loadImage = (src: string): Promise<HTMLImageElement> =>
+      new Promise((resolve) => {
+        const img = new Image()
+        img.onload = () => resolve(img)
+        img.src = src
+      })
+
+    for (const { src, d } of framesData) {
+      const imgEl = await loadImage(src)
+      gif.addFrame(imgEl, { delay: d, copy: true })
+    }
+
+    gif.on("finished", (blob: Blob) => {
+      setGifUrl(URL.createObjectURL(blob))
+      setGeneratingGif(false)
+    })
+
+    gif.render()
   }
 
   const getSelectedElement = () => {
@@ -270,8 +386,12 @@ export default function BuildDrillPage() {
                 onRemoveFrame={removeFrame}
                 onUpdateFrameName={updateFrameName}
                 onDownloadAll={downloadAllFrames}
+                onExportGif={exportGif}
                 selectedCount={selectedElements.length}
                 onDeleteSelected={removeSelectedElements}
+                gifUrl={gifUrl}
+                onViewGif={handleViewGif}
+                isGeneratingGif={isGeneratingGif}
               />
 
               {/* Main Content Area */}
@@ -294,7 +414,8 @@ export default function BuildDrillPage() {
 
                 {/* Canvas */}
                 <div className="flex-1 min-w-0">
-                  <DrillCanvas
+                  <DrillStage
+                    ref={stageRef}
                     elements={currentFrame.elements}
                     selectedElements={selectedElements}
                     onAddElement={addElement}
@@ -311,6 +432,47 @@ export default function BuildDrillPage() {
           </main>
         </div>
       </div>
+      <Dialog open={isGifModalOpen && !!gifUrl} onOpenChange={setGifModalOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Preview GIF</DialogTitle>
+          </DialogHeader>
+          {gifUrl && (
+            <img
+              key={playKey}
+              src={gifUrl}
+              alt="Drill animation"
+              className={`w-full h-auto transition-opacity duration-150 ${gifLoaded?'opacity-100':'opacity-0'}`}
+              style={{ imageRendering: "pixelated" }}
+              onLoad={()=>setGifLoaded(true)}
+            />
+          )}
+          <DialogFooter>
+            {gifUrl && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  setGifLoaded(false)
+                  setPlayKey((k)=>k+1)
+                }}
+              >
+                Play Again
+              </Button>
+            )}
+            {gifUrl && (
+              <a
+                href={gifUrl}
+                download="training_frames.gif"
+                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md text-sm"
+              >
+                Download
+              </a>
+            )}
+            <DialogClose className="inline-flex items-center px-4 py-2 bg-gray-200 rounded-md text-sm">Close</DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </DndProvider>
   )
 }
