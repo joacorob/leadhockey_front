@@ -52,6 +52,7 @@ export default function BuildDrillPage() {
   const [isGifModalOpen, setGifModalOpen] = useState(false)
   const [isGeneratingGif, setGeneratingGif] = useState(false)
   const [playKey, setPlayKey] = useState(0)
+  const [gifLoaded, setGifLoaded] = useState(false)
 
   const handleViewGif = () => setGifModalOpen(true)
 
@@ -441,8 +442,9 @@ export default function BuildDrillPage() {
               key={playKey}
               src={gifUrl}
               alt="Drill animation"
-              className="w-full h-auto"
+              className={`w-full h-auto transition-opacity duration-150 ${gifLoaded?'opacity-100':'opacity-0'}`}
               style={{ imageRendering: "pixelated" }}
+              onLoad={()=>setGifLoaded(true)}
             />
           )}
           <DialogFooter>
@@ -450,7 +452,10 @@ export default function BuildDrillPage() {
               <Button
                 variant="secondary"
                 size="sm"
-                onClick={() => setPlayKey((k)=>k+1)}
+                onClick={() => {
+                  setGifLoaded(false)
+                  setPlayKey((k)=>k+1)
+                }}
               >
                 Play Again
               </Button>
