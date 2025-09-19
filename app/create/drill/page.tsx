@@ -9,6 +9,15 @@ import { DrillForm } from "@/components/drill-builder/drill-form"
 import { FrameControls } from "@/components/drill-builder/frame-controls"
 import { DndProvider } from "react-dnd"
 import { HTML5Backend } from "react-dnd-html5-backend"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button"
 
 export interface DrillElement {
   id: string
@@ -39,6 +48,11 @@ export default function BuildDrillPage() {
   }, [currentFrameIndex])
   const [selectedElements, setSelectedElements] = useState<string[]>([])
   const [playerCounters, setPlayerCounters] = useState<{ [frameIndex: number]: { [key: string]: number } }>({})
+  const [gifUrl, setGifUrl] = useState<string | null>(null)
+  const [isGifModalOpen, setGifModalOpen] = useState(false)
+  const [playKey, setPlayKey] = useState(0)
+
+  const handleViewGif = () => setGifModalOpen(true)
 
   const [drillData, setDrillData] = useState({
     title: "New Training Session",
@@ -311,13 +325,11 @@ export default function BuildDrillPage() {
         interval,
         gifWidth,
         gifHeight,
+        repeat: 1,
       },
       (obj: any) => {
         if (!obj.error) {
-          const link = document.createElement("a")
-          link.href = obj.image
-          link.download = "training_frames.gif"
-          link.click()
+          setGifUrl(obj.image)
         } else {
           console.error("GIF generation error", obj.error)
         }
@@ -372,6 +384,8 @@ export default function BuildDrillPage() {
                 onExportGif={exportGif}
                 selectedCount={selectedElements.length}
                 onDeleteSelected={removeSelectedElements}
+                gifUrl={gifUrl}
+                onViewGif={handleViewGif}
               />
 
               {/* Main Content Area */}
@@ -412,6 +426,42 @@ export default function BuildDrillPage() {
           </main>
         </div>
       </div>
+      <Dialog open={isGifModalOpen && !!gifUrl} onOpenChange={setGifModalOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Preview GIF</DialogTitle>
+          </DialogHeader>
+          {gifUrl && (
+            <img key={gifUrl + playKey}
+              src={gifUrl}
+              alt="Drill animation"
+              className="w-full h-auto"
+              style={{ imageRendering: "pixelated" }}
+            />
+          )}
+          <DialogFooter>
+            {gifUrl && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setPlayKey((k)=>k+1)}
+              >
+                Play Again
+              </Button>
+            )}
+            {gifUrl && (
+              <a
+                href={gifUrl}
+                download="training_frames.gif"
+                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md text-sm"
+              >
+                Download
+              </a>
+            )}
+            <DialogClose className="inline-flex items-center px-4 py-2 bg-gray-200 rounded-md text-sm">Close</DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </DndProvider>
   )
 }

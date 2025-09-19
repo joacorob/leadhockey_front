@@ -19,6 +19,8 @@ interface FrameControlsProps {
   onExportGif: (opts: { delay: number; width: number }) => void
   selectedCount: number
   onDeleteSelected: () => void
+  gifUrl?: string | null
+  onViewGif?: () => void
 }
 
 export function FrameControls({
@@ -33,6 +35,8 @@ export function FrameControls({
   selectedCount,
   onDeleteSelected,
   onExportGif,
+  gifUrl,
+  onViewGif,
 }: FrameControlsProps) {
   const [isPlaying, setIsPlaying] = useState(false)
   const [showGifOpts, setShowGifOpts] = useState(false)
@@ -160,12 +164,22 @@ export function FrameControls({
               variant="default"
               size="sm"
               onClick={() => {
-                setShowGifOpts(false)
                 onExportGif({ delay: gifDelay, width: gifWidth })
               }}
             >
               Generate GIF
             </Button>
+
+            {gifUrl && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={onViewGif}
+              >
+                <Play className="w-4 h-4 mr-1" />
+                Play GIF
+              </Button>
+            )}
           </div>
         </div>
       )}
