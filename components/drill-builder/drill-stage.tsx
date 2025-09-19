@@ -251,6 +251,7 @@ export const DrillStage = React.forwardRef<any, DrillStageProps>(function DrillS
       }
       case "movement": {
         const color = el.color || "#e11d48"
+        const sizeF = el.size || 1
         switch (el.subType) {
           case "arrow":
             return (
@@ -258,9 +259,9 @@ export const DrillStage = React.forwardRef<any, DrillStageProps>(function DrillS
                 key={el.id}
                 {...commonProps}
                 ref={setNodeRef}
-                points={[0, 0, 40, 0]}
-                pointerLength={8}
-                pointerWidth={8}
+                points={[0, 0, 40 * sizeF, 0]}
+                pointerLength={8 * sizeF}
+                pointerWidth={8 * sizeF}
                 hitStrokeWidth={12}
                 fill={color}
                 stroke={color}
@@ -273,7 +274,7 @@ export const DrillStage = React.forwardRef<any, DrillStageProps>(function DrillS
               <Line key={el.id}
                 {...commonProps}
                 ref={setNodeRef}
-                points={[0, 0, 40, 0]}
+                points={[0, 0, 40 * sizeF, 0]}
                 stroke={color}
                 strokeWidth={3}
                 dash={[6, 6]}
@@ -286,7 +287,7 @@ export const DrillStage = React.forwardRef<any, DrillStageProps>(function DrillS
               <Line key={el.id}
                 {...commonProps}
                 ref={setNodeRef}
-                points={[0, 0, 20, -20, 40, 0]}
+                points={[0, 0, 20 * sizeF, -20 * sizeF, 40 * sizeF, 0]}
                 stroke={color}
                 strokeWidth={3}
                 tension={0.5}

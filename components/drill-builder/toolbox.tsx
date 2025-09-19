@@ -304,7 +304,7 @@ export function Toolbox({
           <h3 className="text-xs font-medium text-gray-700 mb-3 uppercase tracking-wide">MOVEMENT</h3>
           <div className="flex gap-2">
             {movementItems.map((item, index) => (
-              <DraggableItem key={index} type={item.type} subType={item.subType} color={item.color} size={presetSize}>
+              <DraggableItem key={index} type={item.type} subType={item.subType} color={item.color}>
                 <div className="cursor-grab active:cursor-grabbing">
                   {item.subType === "arrow" && (
                     <svg width="24" height="16" viewBox="0 0 24 16" className="text-black">
