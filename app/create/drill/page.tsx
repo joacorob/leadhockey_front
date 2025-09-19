@@ -113,9 +113,10 @@ export default function BuildDrillPage() {
       }))
     }
 
+    // remove from current and subsequent frames to maintain consistency
     setFrames((prevFrames) =>
       prevFrames.map((frame, index) =>
-        index === currentFrameIndex ? { ...frame, elements: frame.elements.filter((el) => el.id !== id) } : frame,
+        index >= currentFrameIndex ? { ...frame, elements: frame.elements.filter((el) => el.id !== id) } : frame,
       ),
     )
   }
@@ -148,7 +149,7 @@ export default function BuildDrillPage() {
 
     setFrames((prevFrames) =>
       prevFrames.map((frame, index) =>
-        index === currentFrameIndex
+        index >= currentFrameIndex
           ? { ...frame, elements: frame.elements.filter((el) => !selectedElements.includes(el.id)) }
           : frame,
       ),
@@ -201,8 +202,7 @@ export default function BuildDrillPage() {
       id: `frame-${Date.now()}`,
       name: `${currentFrame.name} Copy`,
       elements: currentFrame.elements.map((el) => ({
-        ...el,
-        id: `${el.type}-${Date.now()}-${Math.random()}`,
+        ...el, // keep original id so element is the same across frames
       })),
     }
     setFrames([...frames, duplicatedFrame])
