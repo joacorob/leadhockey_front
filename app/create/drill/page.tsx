@@ -50,6 +50,7 @@ export default function BuildDrillPage() {
   const [playerCounters, setPlayerCounters] = useState<{ [frameIndex: number]: { [key: string]: number } }>({})
   const [gifUrl, setGifUrl] = useState<string | null>(null)
   const [isGifModalOpen, setGifModalOpen] = useState(false)
+  const [isGeneratingGif, setGeneratingGif] = useState(false)
   const [playKey, setPlayKey] = useState(0)
 
   const handleViewGif = () => setGifModalOpen(true)
@@ -265,6 +266,7 @@ export default function BuildDrillPage() {
 
   // === GIF EXPORT ===
   const exportGif = async ({ delay, width }: { delay: number; width: number }) => {
+    setGeneratingGif(true)
     // Uso la versión browser que embebe el worker, así evitamos problemas de CORS
     // @ts-ignore – librería no tiene tipos
     const { default: GIF } = await import("gif.js")
@@ -333,6 +335,7 @@ export default function BuildDrillPage() {
 
     gif.on("finished", (blob: Blob) => {
       setGifUrl(URL.createObjectURL(blob))
+      setGeneratingGif(false)
     })
 
     gif.render()
@@ -387,6 +390,7 @@ export default function BuildDrillPage() {
                 onDeleteSelected={removeSelectedElements}
                 gifUrl={gifUrl}
                 onViewGif={handleViewGif}
+                isGeneratingGif={isGeneratingGif}
               />
 
               {/* Main Content Area */}
