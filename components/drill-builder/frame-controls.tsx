@@ -16,7 +16,7 @@ interface FrameControlsProps {
   onRemoveFrame: (index: number) => void
   onUpdateFrameName: (index: number, name: string) => void
   onDownloadAll: () => void
-  onExportGif: () => void
+  onExportGif: (opts: { delay: number; width: number }) => void
   selectedCount: number
   onDeleteSelected: () => void
 }
@@ -35,6 +35,9 @@ export function FrameControls({
   onExportGif,
 }: FrameControlsProps) {
   const [isPlaying, setIsPlaying] = useState(false)
+  const [showGifOpts, setShowGifOpts] = useState(false)
+  const [gifDelay, setGifDelay] = useState(200)
+  const [gifWidth, setGifWidth] = useState(900)
   const [editingFrame, setEditingFrame] = useState<number | null>(null)
 
   const playFrames = () => {
@@ -117,12 +120,55 @@ export function FrameControls({
               Download All
             </Button>
 
-            <Button variant="default" size="sm" onClick={onExportGif}>
+            <Button variant="default" size="sm" onClick={() => setShowGifOpts(!showGifOpts)}>
               <Download className="w-4 h-4 mr-1" />
-              Export GIF
+              GIF Options
             </Button>
           </div>
         </div>
+      {showGifOpts && (
+        <div className="border-t pt-4 mt-4 grid grid-cols-2 gap-4">
+          <div>
+            <label className="text-xs text-gray-600 mb-1 block">Delay per frame (ms)</label>
+            <Input
+              type="number"
+              value={gifDelay}
+              min={50}
+              onChange={(e) => setGifDelay(parseInt(e.target.value, 10) || 0)}
+              className="h-8 text-xs"
+            />
+          </div>
+          <div>
+            <label className="text-xs text-gray-600 mb-1 block">Width (px)</label>
+            <Input
+              type="number"
+              value={gifWidth}
+              min={100}
+              onChange={(e) => setGifWidth(parseInt(e.target.value, 10) || 0)}
+              className="h-8 text-xs"
+            />
+          </div>
+          <div className="col-span-2 flex justify-end gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setShowGifOpts(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="default"
+              size="sm"
+              onClick={() => {
+                setShowGifOpts(false)
+                onExportGif({ delay: gifDelay, width: gifWidth })
+              }}
+            >
+              Generate GIF
+            </Button>
+          </div>
+        </div>
+      )}
 
         {/* Frame Tabs */}
         <div className="flex gap-2 overflow-x-auto pb-2">

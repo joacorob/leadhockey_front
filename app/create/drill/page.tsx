@@ -250,29 +250,67 @@ export default function BuildDrillPage() {
   }
 
   // === GIF EXPORT ===
-  const exportGif = async () => {
+  const exportGif = async ({ delay, width }: { delay: number; width: number }) => {
     const gifshot = await import("gifshot")
-    const delay = 0.2 // seconds per frame
+    const steps = 10 // interpolation steps between keyframes
+    const interval = (delay / steps) / 1000 // seconds per interpolated step
+    const aspect = 600 / 900
+    const gifWidth = width
+    const gifHeight = Math.round(width * aspect)
 
-    // helper to render frame to dataURL
-    const renderFrame = async (index: number) => {
-      setCurrentFrameIndex(index)
+    const renderSnapshot = async () => {
       await new Promise((res) => setTimeout(res, 30))
       return stageRef.current.toDataURL({ pixelRatio: 2 })
     }
 
+    const originalFrames = JSON.parse(JSON.stringify(frames)) as DrillFrame[]
+
     const images: string[] = []
 
     for (let i = 0; i < frames.length; i++) {
-      images.push(await renderFrame(i))
+      // show keyframe i
+      setCurrentFrameIndex(i)
+      images.push(await renderSnapshot())
+
+      const next = frames[i + 1]
+      if (!next) break
+
+      // maps for easy lookup
+      const startMap: Record<string, DrillElement> = {}
+      frames[i].elements.forEach((el) => (startMap[el.id] = el))
+      const endMap: Record<string, DrillElement> = {}
+      next.elements.forEach((el) => (endMap[el.id] = el))
+
+      for (let s = 1; s < steps; s++) {
+        const t = s / steps
+        const interpElements: DrillElement[] = frames[i].elements.map((el) => {
+          const end = endMap[el.id] || el
+          return {
+            ...el,
+            x: el.x + (end.x - el.x) * t,
+            y: el.y + (end.y - el.y) * t,
+            rotation: (el.rotation || 0) + ((end.rotation || 0) - (el.rotation || 0)) * t,
+            size: (el.size || 1) + ((end.size || 1) - (el.size || 1)) * t,
+          }
+        })
+
+        // temporarily update frame i for rendering
+        setFrames((prev) =>
+          prev.map((f, idx) => (idx === i ? { ...f, elements: interpElements } : f)),
+        )
+        images.push(await renderSnapshot())
+      }
     }
+
+    // restore original frames
+    setFrames(originalFrames)
 
     gifshot.default.createGIF(
       {
         images,
-        interval: delay,
-        gifWidth: 900,
-        gifHeight: 600,
+        interval,
+        gifWidth,
+        gifHeight,
       },
       (obj: any) => {
         if (!obj.error) {
