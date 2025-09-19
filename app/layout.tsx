@@ -49,7 +49,7 @@ export default async function RootLayout({
         <SessionProvider session={session}>
           {children}
         </SessionProvider>
-        <MobileNav />
+        <MobileNav isOpen={false} onClose={() => {}} />
         <div className="pb-16 md:pb-0" /> {/* Bottom padding for mobile nav */}
       </body>
     </html>
