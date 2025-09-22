@@ -11,6 +11,7 @@ import { DrillFrame, DrillElement } from "@/app/create/drill/page"
 import { useToast } from "@/hooks/use-toast"
 import { DndProvider } from "react-dnd"
 import { HTML5Backend } from "react-dnd-html5-backend"
+import { Card, CardContent } from "@/components/ui/card"
 
 export default function DrillDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -20,16 +21,18 @@ export default function DrillDetailPage() {
   const stageRef = useRef<any>(null)
   const [gifUrl, setGifUrl] = useState<string | null>(null)
   const [isGeneratingGif, setGeneratingGif] = useState(false)
+  const [drill, setDrill] = useState<any>(null)
 
   useEffect(() => {
     async function fetchDrill() {
       try {
         const res = await fetch(`/api/drills/${id}`)
         const raw = await res.json()
-        const drill = raw.frames ? raw : raw.data // handle wrapped response
-        if (res.ok && drill) {
+        const drillObj = raw.frames ? raw : raw.data
+        if (res.ok && drillObj) {
+          setDrill(drillObj)
           // transform backend → builder format
-          const loadedFrames: DrillFrame[] = drill.frames.map((f: any) => ({
+          const loadedFrames: DrillFrame[] = drillObj.frames.map((f: any) => ({
             id: `frame-${f.id}`,
             name: `Frame ${f.order_index + 1}`,
             elements: f.elements.map((el: any): DrillElement => ({
@@ -84,7 +87,12 @@ export default function DrillDetailPage() {
         <div className="flex-1 flex flex-col">
           <Header />
           <main className="flex-1 p-6 overflow-auto">
-            <h1 className="text-2xl font-bold mb-4">Drill #{id}</h1>
+            <h1 className="text-2xl font-bold mb-2">{drill?.title}</h1>
+            {drill?.description && (
+              <Card className="mb-6">
+                <CardContent className="prose max-w-none py-4" dangerouslySetInnerHTML={{ __html: drill.description }} />
+              </Card>
+            )}
 
             <FrameControls
               frames={frames}
