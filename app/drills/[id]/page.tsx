@@ -99,6 +99,7 @@ export default function DrillDetailPage() {
               selectedCount={0}
               onDeleteSelected={()=>{}}
               isGeneratingGif={isGeneratingGif}
+              readOnly
             />
 
             <div className="mt-6">

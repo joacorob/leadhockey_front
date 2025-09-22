@@ -22,6 +22,7 @@ interface FrameControlsProps {
   gifUrl?: string | null
   onViewGif?: () => void
   isGeneratingGif?: boolean
+  readOnly?: boolean // new
 }
 
 export function FrameControls({
@@ -39,6 +40,7 @@ export function FrameControls({
   gifUrl,
   onViewGif,
   isGeneratingGif,
+  readOnly = false,
 }: FrameControlsProps) {
   const [isPlaying, setIsPlaying] = useState(false)
   const [showGifOpts, setShowGifOpts] = useState(false)
@@ -104,22 +106,26 @@ export function FrameControls({
           </div>
 
           <div className="flex items-center gap-2">
-            {selectedCount > 0 && (
+            {!readOnly && selectedCount > 0 && (
               <Button variant="destructive" size="sm" onClick={onDeleteSelected}>
                 <Trash2 className="w-4 h-4 mr-1" />
                 Delete ({selectedCount})
               </Button>
             )}
 
-            <Button variant="outline" size="sm" onClick={onDuplicateFrame}>
-              <Copy className="w-4 h-4 mr-1" />
-              Duplicate
-            </Button>
+            {!readOnly && (
+              <>
+                <Button variant="outline" size="sm" onClick={onDuplicateFrame}>
+                  <Copy className="w-4 h-4 mr-1" />
+                  Duplicate
+                </Button>
 
-            <Button variant="outline" size="sm" onClick={onAddFrame}>
-              <Plus className="w-4 h-4 mr-1" />
-              Add Frame
-            </Button>
+                <Button variant="outline" size="sm" onClick={onAddFrame}>
+                  <Plus className="w-4 h-4 mr-1" />
+                  Add Frame
+                </Button>
+              </>
+            )}
 
             <Button variant="default" size="sm" onClick={onDownloadAll}>
               <Download className="w-4 h-4 mr-1" />
@@ -204,45 +210,49 @@ export function FrameControls({
               onClick={() => onFrameChange(index)}
             >
               {editingFrame === index ? (
-                <Input
-                  defaultValue={frame.name}
-                  className="h-6 text-xs min-w-[80px]"
-                  onBlur={(e) => handleFrameNameSubmit(index, e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      handleFrameNameSubmit(index, e.currentTarget.value)
-                    }
-                    if (e.key === "Escape") {
-                      setEditingFrame(null)
-                    }
-                  }}
-                  autoFocus
-                  onFocus={(e) => e.target.select()}
-                />
+                !readOnly && (
+                  <Input
+                    defaultValue={frame.name}
+                    className="h-6 text-xs min-w-[80px]"
+                    onBlur={(e) => handleFrameNameSubmit(index, e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        handleFrameNameSubmit(index, e.currentTarget.value)
+                      }
+                      if (e.key === "Escape") {
+                        setEditingFrame(null)
+                      }
+                    }}
+                    autoFocus
+                    onFocus={(e) => e.target.select()}
+                  />
+                )
               ) : (
                 <div className="flex items-center gap-1">
                   <span
                     className="text-xs font-medium truncate"
-                    onDoubleClick={() => setEditingFrame(index)}
+                    onDoubleClick={() => !readOnly && setEditingFrame(index)}
                   >
                     {frame.name}
                   </span>
-                  <button
-                    className="p-0 m-0 text-gray-500 hover:text-gray-700"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setEditingFrame(index)
-                    }}
-                    title="Rename"
-                  >
-                    <Pencil className="w-3 h-3" />
-                  </button>
+                  {!readOnly && (
+                    <button
+                      className="p-0 m-0 text-gray-500 hover:text-gray-700"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setEditingFrame(index)
+                      }}
+                      title="Rename"
+                    >
+                      <Pencil className="w-3 h-3" />
+                    </button>
+                  )}
                 </div>
               )}
 
               <span className="text-xs text-gray-500">({frame.elements.length})</span>
 
-              {frames.length > 1 && (
+              {!readOnly && frames.length > 1 && (
                 <Button
                   variant="ghost"
                   size="sm"
