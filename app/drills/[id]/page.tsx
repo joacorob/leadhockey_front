@@ -44,7 +44,7 @@ export default function DrillDetailPage() {
               rotation: el.rotation,
               size: el.scale,
               text: el.text || undefined,
-              color: "#ffffff",
+              color: el.color || undefined,
             })),
           }))
           setFrames(loadedFrames)

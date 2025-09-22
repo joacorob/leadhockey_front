@@ -86,6 +86,7 @@ export default function BuildDrillPage() {
             rotation: el.rotation || 0,
             scale: el.size || 1,
             text: el.text || null,
+            color: el.color || null,
           })),
         })),
       }
