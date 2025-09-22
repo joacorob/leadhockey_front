@@ -18,6 +18,8 @@ import {
   DialogClose,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
+import { useRouter } from "next/navigation"
+import { useToast } from "@/hooks/use-toast"
 
 export interface DrillElement {
   id: string
@@ -58,6 +60,7 @@ export default function BuildDrillPage() {
 
   const [drillData, setDrillData] = useState({
     title: "New Training Session",
+    description: "",
     date: "07/08/2025",
     coach: "Your name",
     gameplay: "Gameplay",
@@ -65,6 +68,46 @@ export default function BuildDrillPage() {
     level: "All levels",
     players: "Available players",
   })
+
+  const router = useRouter()
+  const { toast } = useToast()
+
+  const handleSaveDrill = async () => {
+    try {
+      const payload = {
+        title: drillData.title,
+        description: drillData.description || undefined,
+        frames: frames.map((f, idx) => ({
+          order_index: idx,
+          elements: f.elements.map((el) => ({
+            icon_path: `${el.type}/${el.subType}`,
+            x: el.x / 900,
+            y: el.y / 600,
+            rotation: el.rotation || 0,
+            scale: el.size || 1,
+            text: el.text || null,
+          })),
+        })),
+      }
+
+      const res = await fetch("/api/drills", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      })
+
+      const data = await res.json()
+
+      if (res.ok) {
+        toast({ title: "Drill saved" })
+        router.push(`/drills/${data.id || data?.data?.id}`)
+      } else {
+        toast({ title: "Error", description: data.error || "Failed to save drill", variant: "destructive" })
+      }
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" })
+    }
+  }
 
   const currentFrame = frames[currentFrameIndex]
   const currentPlayerCounters = playerCounters[currentFrameIndex] || {}
@@ -376,6 +419,11 @@ export default function BuildDrillPage() {
               {/* Form Section */}
               <DrillForm data={drillData} onChange={setDrillData} />
 
+              {/* Save Drill CTA */}
+              <div className="mb-4">
+                <Button onClick={handleSaveDrill} variant="default">Save Drill</Button>
+              </div>
+
               {/* Frame Controls */}
               <FrameControls
                 frames={frames}
@@ -413,7 +461,7 @@ export default function BuildDrillPage() {
                 </div>
 
                 {/* Canvas */}
-                <div className="flex-1 min-w-0">
+                <div>
                   <DrillStage
                     ref={stageRef}
                     elements={currentFrame.elements}

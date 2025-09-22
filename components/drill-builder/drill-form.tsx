@@ -11,6 +11,7 @@ interface DrillFormProps {
     ageGroup: string
     level: string
     players: string
+    description: string
   }
   onChange: (data: any) => void
 }
@@ -59,6 +60,12 @@ export function DrillForm({ data, onChange }: DrillFormProps) {
           onChange={(e) => updateField('coach', e.target.value)}
           className="w-full"
         />
+      </div>
+
+      {/* Description */}
+      <div className="md:col-span-3">
+        <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+        <Input value={data.description} onChange={(e)=>updateField('description',e.target.value)} className="w-full" />
       </div>
 
       {/* Dropdowns Row */}
