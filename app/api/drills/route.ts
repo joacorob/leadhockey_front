@@ -31,3 +31,26 @@ export async function POST(request: NextRequest) {
     )
   }
 }
+
+// GET /api/drills – proxy list drills from backend
+export async function GET(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions)
+    const accessToken: string | undefined = (session as any)?.accessToken
+
+    const { searchParams } = new URL(request.url)
+    const externalUrl = new URL(`${process.env.LEAD_BACKEND}/api/v1/drills`)
+    searchParams.forEach((v, k) => externalUrl.searchParams.append(k, v))
+
+    const externalResponse = await fetch(externalUrl.toString(), {
+      headers: {
+        accept: "application/json",
+        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+      },
+    })
+    const data = await externalResponse.json()
+    return NextResponse.json(data, { status: externalResponse.status })
+  } catch {
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+  }
+}

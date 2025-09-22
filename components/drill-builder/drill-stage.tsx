@@ -12,6 +12,7 @@ interface DrillStageProps {
   onRemoveElement: (id: string) => void
   onSelectionChange: (ids: string[]) => void
   onMoveSelected: (dx: number, dy: number) => void
+  interactive?: boolean // new
 }
 
 export const DrillStage = React.forwardRef<any, DrillStageProps>(function DrillStage({
@@ -22,6 +23,7 @@ export const DrillStage = React.forwardRef<any, DrillStageProps>(function DrillS
   onRemoveElement,
   onSelectionChange,
   onMoveSelected,
+  interactive = true,
 }: DrillStageProps, externalRef) {
   // Load field image once
   const [fieldImage] = useImage("/field_drag.png")
@@ -77,6 +79,7 @@ export const DrillStage = React.forwardRef<any, DrillStageProps>(function DrillS
     () => ({
       accept: "drill-item",
       drop: (item: any, monitor) => {
+        if (!interactive) return
         if (!stageRef.current) return
         const client = monitor.getClientOffset()
         if (!client) return
@@ -99,10 +102,10 @@ export const DrillStage = React.forwardRef<any, DrillStageProps>(function DrillS
         })
       },
       collect: (monitor) => ({
-        isOver: monitor.isOver(),
+        isOver: interactive ? monitor.isOver() : false,
       }),
     }),
-    [onAddElement],
+    [onAddElement, interactive],
   )
 
   const handleDragEnd = (id: string, e: any) => {
@@ -147,7 +150,7 @@ export const DrillStage = React.forwardRef<any, DrillStageProps>(function DrillS
     const commonProps = {
       x: el.x,
       y: el.y,
-      draggable: !(showTransformer && selectedElements.includes(el.id)),
+      draggable: interactive && !(showTransformer && selectedElements.includes(el.id)),
       onDragStart: handleDragStart,
       onDragMove: (e: any) => handleDragMove(el.id, e),
       onDragEnd: (e: any) => handleDragEnd(el.id, e),
@@ -322,7 +325,7 @@ export const DrillStage = React.forwardRef<any, DrillStageProps>(function DrillS
   }
 
   return (
-    <div ref={(node)=>{ if(node) drop(node); }} className={isOver ? "ring-2 ring-yellow-400 rounded-lg" : ""}>
+    <div ref={(node)=>{ if(node) interactive && drop(node); }} className={isOver ? "ring-2 ring-yellow-400 rounded-lg" : ""}>
       <Stage
         ref={(node)=>{stageRef.current=node; if(externalRef){ if(typeof externalRef==='function'){externalRef(node);} else {externalRef.current=node}} }}
         width={width}
@@ -330,6 +333,7 @@ export const DrillStage = React.forwardRef<any, DrillStageProps>(function DrillS
         className="border rounded-lg shadow"
         tabIndex={0}
         onClick={(e:any)=>{
+          if(!interactive) return
           // Only clear selection when clicking on empty stage
           const stage = e.target.getStage()
           if(e.target === stage){
