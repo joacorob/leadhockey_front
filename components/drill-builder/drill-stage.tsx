@@ -182,6 +182,13 @@ export const DrillStage = React.forwardRef<any, DrillStageProps>(function DrillS
     }
 
     const isSel = selectedElements.includes(el.id)
+    // Common outline props for selected state
+    const selOutline = isSel
+      ? { stroke: "black", strokeWidth: 4 }
+      : {}
+    const selShadow = isSel
+      ? { shadowEnabled: true, shadowColor: "black", shadowBlur: 4, shadowOpacity: 1, shadowOffset: { x: 0, y: 0 } }
+      : {}
 
     // attach ref to node
     const setNodeRef = (node: any) => {
@@ -247,6 +254,8 @@ export const DrillStage = React.forwardRef<any, DrillStageProps>(function DrillS
                 rotation={180}
                 offset={{ x: 0, y: size / 2 }}
                 onTransformEnd={onTransformEnd}
+                {...selOutline}
+                {...selShadow}
               />
             )
           case "circle":
@@ -257,9 +266,9 @@ export const DrillStage = React.forwardRef<any, DrillStageProps>(function DrillS
                 ref={setNodeRef}
                 radius={size}
                 fill="#ffffff"
-                stroke="#1f2937"
-                strokeWidth={2}
-                onTransformEnd={onTransformEnd}
+                stroke={isSel ? "black" : "#1f2937"}
+                strokeWidth={isSel ? 4 : 2}
+                {...selShadow}
               />
             )
           case "square":
@@ -271,9 +280,9 @@ export const DrillStage = React.forwardRef<any, DrillStageProps>(function DrillS
                 height={size * 2}
                 offset={{ x: size, y: size }}
                 fill="#ffffff"
-                stroke="#1f2937"
-                strokeWidth={2}
-                onTransformEnd={onTransformEnd}
+                stroke={isSel ? "black" : "#1f2937"}
+                strokeWidth={isSel ? 4 : 2}
+                {...selShadow}
               />
             )
           case "line":
@@ -285,7 +294,10 @@ export const DrillStage = React.forwardRef<any, DrillStageProps>(function DrillS
                 height={4}
                 offset={{ x: (size * 3) / 2, y: 2 }}
                 fill={el.color || "#000000"}
+                stroke={isSel ? "black" : undefined}
+                strokeWidth={isSel ? 2 : 0}
                 onTransformEnd={onTransformEnd}
+                {...selShadow}
               />
             )
           default:
@@ -310,6 +322,7 @@ export const DrillStage = React.forwardRef<any, DrillStageProps>(function DrillS
                 stroke={color}
                 strokeWidth={3}
                 rotation={el.rotation || 0}
+                {...selShadow}
               />
             )
           case "dotted-line":
@@ -323,6 +336,7 @@ export const DrillStage = React.forwardRef<any, DrillStageProps>(function DrillS
                 dash={[6, 6]}
                 hitStrokeWidth={12}
                 rotation={el.rotation || 0}
+                {...selShadow}
               />
             )
           case "curved-line":
@@ -337,6 +351,7 @@ export const DrillStage = React.forwardRef<any, DrillStageProps>(function DrillS
                 bezier={true}
                 hitStrokeWidth={12}
                 rotation={el.rotation || 0}
+                {...selShadow}
               />
             )
           default:
@@ -350,6 +365,8 @@ export const DrillStage = React.forwardRef<any, DrillStageProps>(function DrillS
             text={el.text || "Text"}
             fontSize={14 * (el.size || 1)}
             fill={el.color || "#000"}
+            {...selOutline}
+            {...selShadow}
             ref={setNodeRef}
             onTransformEnd={(e: any) => {
               const node = e.target
