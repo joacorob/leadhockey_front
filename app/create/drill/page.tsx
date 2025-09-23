@@ -42,12 +42,18 @@ export interface DrillFrame {
 
 export default function BuildDrillPage() {
   const [frames, setFrames] = useState<DrillFrame[]>([{ id: "frame-1", name: "Frame 1", elements: [] }])
+  const framesRef = useRef<DrillFrame[]>([{ id: "frame-1", name: "Frame 1", elements: [] }])
   const stageRef = useRef<any>(null)
   const [currentFrameIndex, setCurrentFrameIndex] = useState(0)
   const currentFrameRef = useRef(0)
   useEffect(() => {
     currentFrameRef.current = currentFrameIndex
   }, [currentFrameIndex])
+
+  // Keep a ref with latest frames for synchronous reads (e.g., inheritance)
+  useEffect(() => {
+    framesRef.current = frames
+  }, [frames])
   const [selectedElements, setSelectedElements] = useState<string[]>([])
   const [playerCounters, setPlayerCounters] = useState<{ [frameIndex: number]: { [key: string]: number } }>({})
   const [gifUrl, setGifUrl] = useState<string | null>(null)
@@ -121,11 +127,27 @@ export default function BuildDrillPage() {
   }
 
   const addElement = (element: Omit<DrillElement, "id">) => {
+    // If adding a cone, inherit attributes from last cone of same subtype
+    let inherited: Partial<DrillElement> = {}
+    if (element.type === "equipment" && (element.subType === "cone-orange" || element.subType === "cone-blue")) {
+      const existing = framesRef.current[currentFrameRef.current].elements
+        .filter((el) => el.type === "equipment" && el.subType === element.subType)
+        .slice(-1)[0]
+      if (existing) {
+        inherited = {
+          color: existing.color,
+          size: existing.size,
+          rotation: existing.rotation,
+        }
+      }
+    }
+
     const newElement: DrillElement = {
       ...element,
+      ...inherited,
       id: `${element.type}-${Date.now()}-${Math.random()}`,
-      size: element.size || 1, // Use provided size or default to 1
-      rotation: 0,
+      size: inherited.size ?? element.size ?? 1,
+      rotation: inherited.rotation ?? 0,
     }
 
     const idx = currentFrameRef.current
