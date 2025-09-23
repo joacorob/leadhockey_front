@@ -291,9 +291,9 @@ export function Toolbox({
                   )}
                   {item.subType === "line" && <div className="w-8 h-1 bg-black" />}
                   {item.subType === "circle" && (
-                    <div className="w-6 h-6 rounded-full border-2 border-gray-800 bg-white" />
+                    <div className="w-6 h-6 rounded-full border border-gray-800 bg-white" />
                   )}
-                  {item.subType === "square" && <div className="w-6 h-6 border-2 border-gray-800 bg-white" />}
+                  {item.subType === "square" && <div className="w-6 h-6 border border-gray-800 bg-white" />}
                 </div>
               </DraggableItem>
             ))}

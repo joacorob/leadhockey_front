@@ -207,7 +207,7 @@ export function DrillCanvas({
         drop(node)
       }}
       className={`relative w-full h-full bg-[url('/field_drag.png')] bg-[length:100%_100%] bg-center bg-no-repeat rounded-lg overflow-hidden cursor-crosshair ${
-        isOver ? "ring-2 ring-yellow-400" : ""
+        isOver ? "ring-2 ring-black" : ""
       }`}
       onMouseDown={handleMouseDown}
       onKeyDown={handleKeyDown}
@@ -217,7 +217,7 @@ export function DrillCanvas({
 
       {selectionRect && (
         <div
-          className="absolute border-2 border-dashed border-yellow-400 bg-yellow-400/20 pointer-events-none"
+          className="absolute border-2 border-dashed border-black bg-black/20 pointer-events-none"
           style={{
             left: selectionRect.left,
             top: selectionRect.top,
@@ -228,8 +228,8 @@ export function DrillCanvas({
       )}
 
       {isOver && (
-        <div className="absolute inset-0 bg-yellow-400/20 border-2 border-dashed border-yellow-400 rounded-lg flex items-center justify-center">
-          <div className="bg-yellow-400 text-yellow-900 px-4 py-2 rounded-lg font-medium">Drop here to add element</div>
+        <div className="absolute inset-0 bg-black/20 border-2 border-dashed border-black rounded-lg flex items-center justify-center">
+          <div className="bg-black text-white px-4 py-2 rounded-lg font-medium">Drop here to add element</div>
         </div>
       )}
 
@@ -254,7 +254,7 @@ export function DrillCanvas({
       )} */}
 
       {selectedElements.length > 1 && (
-        <div className="absolute top-4 left-4 bg-yellow-400 text-yellow-900 px-3 py-1 rounded-lg text-sm font-medium">
+        <div className="absolute top-4 left-4 bg-black text-white px-3 py-1 rounded-lg text-sm font-medium">
           {selectedElements.length} elements selected
         </div>
       )}

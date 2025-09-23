@@ -75,7 +75,7 @@ export function DrillElementComponent({ element, isSelected, onClick, onMove, on
         return (
           <div
             className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold ${
-              isSelected ? "ring-2 ring-yellow-400" : ""
+              isSelected ? "ring-2 ring-black" : ""
             }`}
             style={{ backgroundColor: element.color, ...sizeStyle }}
           >
@@ -85,7 +85,7 @@ export function DrillElementComponent({ element, isSelected, onClick, onMove, on
 
       case "equipment":
         return (
-          <div className={isSelected ? "ring-2 ring-yellow-400 rounded" : ""} style={sizeStyle}>
+          <div className={isSelected ? "ring-2 ring-black rounded" : ""} style={sizeStyle}>
             {element.subType === "cone-orange" && (
               <div
                 className="w-0 h-0 border-l-[8px] border-r-[8px] border-b-[14px] border-l-transparent border-r-transparent"
@@ -115,7 +115,7 @@ export function DrillElementComponent({ element, isSelected, onClick, onMove, on
 
       case "movement":
         return (
-          <div className={isSelected ? "ring-2 ring-yellow-400 rounded" : ""} style={sizeStyle}>
+          <div className={isSelected ? "ring-2 ring-black rounded" : ""} style={sizeStyle}>
             {element.subType === "arrow" && (
               <svg width="32" height="20" viewBox="0 0 32 20" style={{ color: element.color || "#ffffff" }}>
                 <path d="M0 10h28m-6-6l6 6-6 6" stroke="currentColor" strokeWidth="2" fill="none" />
@@ -152,7 +152,7 @@ export function DrillElementComponent({ element, isSelected, onClick, onMove, on
         ) : (
           <div
             className={`bg-white text-black px-2 py-1 rounded text-sm cursor-text ${
-              isSelected ? "ring-2 ring-yellow-400" : ""
+              isSelected ? "ring-2 ring-black" : ""
             }`}
           >
             {element.text || "Text"}

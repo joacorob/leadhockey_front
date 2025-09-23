@@ -173,8 +173,9 @@ export const DrillStage = React.forwardRef<any, DrillStageProps>(function DrillS
             {...commonProps}
             radius={(el.size || 1) * 12}
             fill={el.color || "#2563eb"}
-            stroke={isSel ? "yellow" : "black"}
-            strokeWidth={isSel ? 4 : 1}
+            // Remove default border; only show highlight when selected
+            stroke={isSel ? "black" : undefined}
+            strokeWidth={isSel ? 4 : 0}
             ref={setNodeRef}
             onTransformEnd={(e: any) => {
               const node = e.target
