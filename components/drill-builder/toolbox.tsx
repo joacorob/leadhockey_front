@@ -65,7 +65,7 @@ export function Toolbox({
       label: (playerCounters.team2 || 0) + 1,
       size: playerPresets.team2.size,
     },
-    { type: "player", subType: "coach", color: "#000000", label: "C", size: presetSize },
+    { type: "player", subType: "coach", color: "#000000", label: "G", size: presetSize },
   ]
 
   const equipmentItems = [
