@@ -148,6 +148,8 @@ export default function BuildDrillPage() {
       id: `${element.type}-${Date.now()}-${Math.random()}`,
       size: inherited.size ?? element.size ?? 1,
       rotation: inherited.rotation ?? 0,
+      // Store the player number inside text so it is persisted and rendered
+      text: element.type === "player" ? String(element.label ?? element.text ?? "") : element.text,
     }
 
     const idx = currentFrameRef.current
@@ -186,13 +188,18 @@ export default function BuildDrillPage() {
     const elementToRemove = currentFrame.elements.find((el) => el.id === id)
     if (elementToRemove && elementToRemove.type === "player" && elementToRemove.subType !== "coach") {
       const key = elementToRemove.subType
-      setPlayerCounters((prev) => ({
-        ...prev,
-        [currentFrameIndex]: {
-          ...prev[currentFrameIndex],
-          [key]: Math.max(0, (prev[currentFrameIndex]?.[key] || 1) - 1),
-        },
-      }))
+      setPlayerCounters((prev) => {
+        const current = prev[currentFrameIndex]?.[key] || 0
+        const removedNumber = parseInt(String(elementToRemove.text ?? elementToRemove.label ?? "0"), 10)
+        const newCount = removedNumber === current ? Math.max(0, current - 1) : current
+        return {
+          ...prev,
+          [currentFrameIndex]: {
+            ...prev[currentFrameIndex],
+            [key]: newCount,
+          },
+        }
+      })
     }
 
     // remove from current and subsequent frames to maintain consistency
@@ -205,28 +212,23 @@ export default function BuildDrillPage() {
 
   const removeSelectedElements = () => {
     const elementsToRemove = currentFrame.elements.filter((el) => selectedElements.includes(el.id))
-    const playerUpdates: { [key: string]: number } = {}
-
-    elementsToRemove.forEach((element) => {
-      if (element.type === "player" && element.subType !== "coach") {
-        playerUpdates[element.subType] = (playerUpdates[element.subType] || 0) + 1
-      }
-    })
-
-    if (Object.keys(playerUpdates).length > 0) {
-      setPlayerCounters((prev) => ({
-        ...prev,
-        [currentFrameIndex]: {
-          ...prev[currentFrameIndex],
-          ...Object.keys(playerUpdates).reduce(
-            (acc, key) => ({
-              ...acc,
-              [key]: Math.max(0, (prev[currentFrameIndex]?.[key] || 0) - playerUpdates[key]),
-            }),
-            {},
-          ),
-        },
-      }))
+    if (elementsToRemove.length > 0) {
+      setPlayerCounters((prev) => {
+        const newFrameCounters = { ...(prev[currentFrameIndex] || {}) }
+        elementsToRemove.forEach((element) => {
+          if (element.type !== "player" || element.subType === "coach") return
+          const key = element.subType
+          const current = newFrameCounters[key] || 0
+          const removedNumber = parseInt(String(element.text ?? element.label ?? "0"), 10)
+          if (removedNumber === current) {
+            newFrameCounters[key] = Math.max(0, current - 1)
+          }
+        })
+        return {
+          ...prev,
+          [currentFrameIndex]: newFrameCounters,
+        }
+      })
     }
 
     setFrames((prevFrames) =>

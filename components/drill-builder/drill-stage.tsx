@@ -1,4 +1,4 @@
-import { Stage, Layer, Image as KonvaImage, Circle, Rect, Arrow, Text as KonvaText, Transformer, Line, RegularPolygon } from "react-konva"
+import { Stage, Layer, Image as KonvaImage, Circle, Rect, Arrow, Text as KonvaText, Transformer, Line, RegularPolygon, Group } from "react-konva"
 import { useDrop } from "react-dnd"
 import useImage from "use-image"
 import type { DrillElement } from "@/app/create/drill/page"
@@ -189,16 +189,13 @@ export const DrillStage = React.forwardRef<any, DrillStageProps>(function DrillS
     }
 
     switch (el.type) {
-      case "player":
+      case "player": {
+        const radius = (el.size || 1) * 12
+        const fontSize = 14 * (el.size || 1)
         return (
-          <Circle
+          <Group
             key={el.id}
             {...commonProps}
-            radius={(el.size || 1) * 12}
-            fill={el.color || "#2563eb"}
-            // Remove default border; only show highlight when selected
-            stroke={isSel ? "black" : undefined}
-            strokeWidth={isSel ? 4 : 0}
             ref={setNodeRef}
             onTransformEnd={(e: any) => {
               const node = e.target
@@ -206,8 +203,26 @@ export const DrillStage = React.forwardRef<any, DrillStageProps>(function DrillS
               node.scale({ x: 1, y: 1 })
               onUpdateElement(el.id, { size: (el.size || 1) * scale })
             }}
-          />
+          >
+            <Circle
+              radius={radius}
+              fill={el.color || "#2563eb"}
+              stroke={isSel ? "black" : undefined}
+              strokeWidth={isSel ? 4 : 0}
+            />
+            <KonvaText
+              text={String(el.text || el.label || "")}
+              fontSize={fontSize}
+              fill="#ffffff"
+              width={radius * 2}
+              align="center"
+              verticalAlign="middle"
+              offsetX={radius}
+              offsetY={fontSize / 2}
+            />
+          </Group>
         )
+      }
       case "equipment": {
         const size = (el.size || 1) * 12
         const onTransformEnd = (e: any) => {

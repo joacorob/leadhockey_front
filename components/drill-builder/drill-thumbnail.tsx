@@ -16,7 +16,20 @@ export function DrillThumbnail({ element, width = 160, height = 100 }: Props) {
     const sizeF = el.size || 1
     switch (el.type) {
       case "player":
-        return <Circle x={el.x * width} y={el.y * height} radius={8 * sizeF} fill={color} stroke="black" strokeWidth={1} />
+        return (
+          <>
+            <Circle x={el.x * width} y={el.y * height} radius={8 * sizeF} fill={color} stroke="black" strokeWidth={1} />
+            <KonvaText
+              x={el.x * width - 8 * sizeF}
+              y={el.y * height - 5 * sizeF}
+              width={16 * sizeF}
+              align="center"
+              text={String(el.text || el.label || "")}
+              fontSize={8 * sizeF}
+              fill="#ffffff"
+            />
+          </>
+        )
       case "equipment":
         switch (el.subType) {
           case "cone":

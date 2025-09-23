@@ -79,7 +79,7 @@ export function DrillElementComponent({ element, isSelected, onClick, onMove, on
             }`}
             style={{ backgroundColor: element.color, ...sizeStyle }}
           >
-            {element.label}
+            {element.text || element.label}
           </div>
         )
 
