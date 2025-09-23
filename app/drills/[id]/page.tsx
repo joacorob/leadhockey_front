@@ -103,10 +103,11 @@ export default function DrillDetailPage() {
               onRemoveFrame={()=>{}}
               onUpdateFrameName={()=>{}}
               onDownloadAll={()=>{}}
-              onExportGif={()=>{}}
+              onPreviewVideo={()=>{}}
+              speed="regular"
+              onChangeSpeed={()=>{}}
               selectedCount={0}
               onDeleteSelected={()=>{}}
-              isGeneratingGif={isGeneratingGif}
               readOnly
             />
 

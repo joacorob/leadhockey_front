@@ -59,6 +59,8 @@ export default function BuildDrillPage() {
   const [gifUrl, setGifUrl] = useState<string | null>(null)
   const [isGifModalOpen, setGifModalOpen] = useState(false)
   const [isGeneratingGif, setGeneratingGif] = useState(false)
+  const [speed,setSpeed]=useState<'slow'|'regular'|'fast'>('regular')
+  const [isDownloadingVideo,setDownloadingVideo]=useState(false)
   const [playKey, setPlayKey] = useState(0)
   const [gifLoaded, setGifLoaded] = useState(false)
 
@@ -335,6 +337,7 @@ export default function BuildDrillPage() {
 
   // === GIF EXPORT ===
   const exportGif = async ({ delay, width }: { delay: number; width: number }) => {
+    // kept for backwards compatibility – called internally via handlePreviewVideo
     setGeneratingGif(true)
     // Uso la versión browser que embebe el worker, así evitamos problemas de CORS
     // @ts-ignore – librería no tiene tipos
@@ -410,6 +413,43 @@ export default function BuildDrillPage() {
     gif.render()
   }
 
+  const handleDownloadVideo=async()=>{
+    if(gifUrl){
+      // trigger download immediately
+      const link=document.createElement('a')
+      link.href=gifUrl
+      link.download='training_frames.gif'
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      return
+    }
+    setDownloadingVideo(true)
+    await exportGif({delay:delayMap[speed],width:900})
+    // recursion safety: gif generated now -> call again
+    setDownloadingVideo(false)
+    if(gifUrl){
+      handleDownloadVideo()
+    }
+  }
+
+  const delayMap:{[k in 'slow'|'regular'|'fast']:number}={slow:1200,regular:800,fast:400}
+
+  const handlePreviewVideo=async()=>{
+    if(gifUrl && !isGeneratingGif){
+      setGifModalOpen(true)
+      return
+    }
+    await exportGif({delay:delayMap[speed],width:900})
+    setGifModalOpen(true)
+  }
+
+  const handleSpeedChange=(s:'slow'|'regular'|'fast')=>{
+    setSpeed(s)
+    // invalidate existing gif so it regenerates on next preview
+    setGifUrl(null)
+  }
+
   const getSelectedElement = () => {
     if (selectedElements.length === 1) {
       return currentFrame.elements.find((el) => el.id === selectedElements[0])
@@ -439,7 +479,12 @@ export default function BuildDrillPage() {
           <main className="flex-1 p-6 overflow-auto">
             <div className="max-w-full mx-auto">
               {/* Page Title */}
-              <h1 className="text-2xl font-bold text-gray-900 mb-6">BUILD A DRILL</h1>
+              <div className="flex items-center justify-between mb-6">
+                <h1 className="text-2xl font-bold text-gray-900">BUILD A DRILL</h1>
+                <Button onClick={handleDownloadVideo} variant="default" size="sm" disabled={isDownloadingVideo || isGeneratingGif}>
+                  {isDownloadingVideo || isGeneratingGif ? 'Generating video…' : 'Download Video'}
+                </Button>
+              </div>
 
               {/* Form Section */}
               <DrillForm data={drillData} onChange={setDrillData} />
@@ -459,12 +504,12 @@ export default function BuildDrillPage() {
                 onRemoveFrame={removeFrame}
                 onUpdateFrameName={updateFrameName}
                 onDownloadAll={downloadAllFrames}
-                onExportGif={exportGif}
                 selectedCount={selectedElements.length}
                 onDeleteSelected={removeSelectedElements}
-                gifUrl={gifUrl}
-                onViewGif={handleViewGif}
-                isGeneratingGif={isGeneratingGif}
+                onPreviewVideo={handlePreviewVideo}
+                speed={speed}
+                onChangeSpeed={handleSpeedChange}
+                isGenerating={isGeneratingGif}
               />
 
               {/* Main Content Area */}

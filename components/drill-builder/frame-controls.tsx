@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import type { DrillFrame } from "@/app/create/drill/page"
-import { Plus, Copy, Trash2, Download, Play, Pause, SkipBack, SkipForward, Pencil } from "lucide-react"
+import { Plus, Copy, Trash2, Download, Play, Pause, SkipBack, SkipForward, Pencil, Settings } from "lucide-react"
 import { useState } from "react"
 
 interface FrameControlsProps {
@@ -15,14 +15,14 @@ interface FrameControlsProps {
   onDuplicateFrame: () => void
   onRemoveFrame: (index: number) => void
   onUpdateFrameName: (index: number, name: string) => void
-  onDownloadAll: () => void
-  onExportGif: (opts: { delay: number; width: number }) => void
+  onDownloadAll: () => void // still for PDF export
+  onPreviewVideo?: () => void
+  speed?: "slow" | "regular" | "fast"
+  onChangeSpeed?: (speed: "slow" | "regular" | "fast") => void
   selectedCount: number
   onDeleteSelected: () => void
-  gifUrl?: string | null
-  onViewGif?: () => void
-  isGeneratingGif?: boolean
-  readOnly?: boolean // new
+  readOnly?: boolean
+  isGenerating?: boolean
 }
 
 export function FrameControls({
@@ -36,16 +36,14 @@ export function FrameControls({
   onDownloadAll,
   selectedCount,
   onDeleteSelected,
-  onExportGif,
-  gifUrl,
-  onViewGif,
-  isGeneratingGif,
+  onPreviewVideo,
+  speed = "regular",
+  onChangeSpeed,
+  isGenerating = false,
   readOnly = false,
 }: FrameControlsProps) {
   const [isPlaying, setIsPlaying] = useState(false)
-  const [showGifOpts, setShowGifOpts] = useState(false)
-  const [gifDelay, setGifDelay] = useState(800)
-  const [gifWidth, setGifWidth] = useState(900)
+  const [showSpeedMenu, setShowSpeedMenu] = useState(false)
   const [editingFrame, setEditingFrame] = useState<number | null>(null)
 
   const playFrames = () => {
@@ -102,6 +100,16 @@ export function FrameControls({
               >
                 <SkipForward className="w-4 h-4" />
               </Button>
+              {!readOnly && (
+                <>
+                  <Button variant="outline" size="sm" onClick={onDuplicateFrame} title="Duplicate Frame">
+                    <Copy className="w-4 h-4" />
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={onAddFrame} title="Add Frame">
+                    <Plus className="w-4 h-4" />
+                  </Button>
+                </>
+              )}
             </div>
           </div>
 
@@ -113,89 +121,47 @@ export function FrameControls({
               </Button>
             )}
 
-            {!readOnly && (
-              <>
-                <Button variant="outline" size="sm" onClick={onDuplicateFrame}>
-                  <Copy className="w-4 h-4 mr-1" />
-                  Duplicate
-                </Button>
-
-                <Button variant="outline" size="sm" onClick={onAddFrame}>
-                  <Plus className="w-4 h-4 mr-1" />
-                  Add Frame
-                </Button>
-              </>
-            )}
-
             <Button variant="default" size="sm" onClick={onDownloadAll}>
               <Download className="w-4 h-4 mr-1" />
-              Download All
+              Download PDF
             </Button>
+            {!readOnly && (
+              <>
+                <Button variant="default" size="sm" onClick={onPreviewVideo} disabled={isGenerating}>
+                  {isGenerating ? (
+                    <span className="flex items-center gap-1">
+                      <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/></svg>
+                      Generating…
+                    </span>
+                  ) : (
+                    <>
+                      <Play className="w-4 h-4 mr-1" />Preview Video
+                    </>
+                  )}
+                </Button>
 
-            <Button variant="default" size="sm" onClick={() => setShowGifOpts(!showGifOpts)}>
-              <Download className="w-4 h-4 mr-1" />
-              GIF Options
-            </Button>
-          </div>
-        </div>
-      {showGifOpts && (
-        <div className="border-t pt-4 mt-4 grid grid-cols-2 gap-4">
-          <div>
-            <label className="text-xs text-gray-600 mb-1 block">Delay per frame (ms)</label>
-            <Input
-              type="number"
-              value={gifDelay}
-              min={50}
-              onChange={(e) => setGifDelay(parseInt(e.target.value, 10) || 0)}
-              className="h-8 text-xs"
-            />
-          </div>
-          <div>
-            <label className="text-xs text-gray-600 mb-1 block">Width (px)</label>
-            <Input
-              type="number"
-              value={gifWidth}
-              min={100}
-              onChange={(e) => setGifWidth(parseInt(e.target.value, 10) || 0)}
-              className="h-8 text-xs"
-            />
-          </div>
-          <div className="col-span-2 flex justify-end gap-2">
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => setShowGifOpts(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="default"
-              size="sm"
-              onClick={() => {
-                onExportGif({ delay: gifDelay, width: gifWidth })
-              }}
-              disabled={isGeneratingGif}
-            >
-              {isGeneratingGif ? (
-                <span className="flex items-center gap-1"><svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/></svg> Generating...</span>
-              ) : (
-                'Generate GIF'
-              )}
-            </Button>
-
-            {gifUrl && (
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={onViewGif}
-              >
-                <Play className="w-4 h-4 mr-1" />
-                Play GIF
-              </Button>
+                <div className="relative">
+                  <Button variant="ghost" size="icon" onClick={() => setShowSpeedMenu(!showSpeedMenu)} title="Animation Speed">
+                    <Settings className="w-4 h-4" />
+                  </Button>
+                  {showSpeedMenu && (
+                    <div className="absolute right-0 mt-2 w-40 bg-white border rounded shadow z-10 p-2 text-sm">
+                      <button className={`w-full text-left px-2 py-1 rounded ${speed==='slow'?'bg-blue-100':''}`} onClick={()=>{onChangeSpeed && onChangeSpeed('slow'); setShowSpeedMenu(false)}}>
+                        Slow
+                      </button>
+                      <button className={`w-full text-left px-2 py-1 rounded ${speed==='regular'?'bg-blue-100':''}`} onClick={()=>{onChangeSpeed && onChangeSpeed('regular'); setShowSpeedMenu(false)}}>
+                        Regular
+                      </button>
+                      <button className={`w-full text-left px-2 py-1 rounded ${speed==='fast'?'bg-blue-100':''}`} onClick={()=>{onChangeSpeed && onChangeSpeed('fast'); setShowSpeedMenu(false)}}>
+                        Fast
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </>
             )}
           </div>
         </div>
-      )}
 
         {/* Frame Tabs */}
         <div className="flex gap-2 overflow-x-auto pb-2">
