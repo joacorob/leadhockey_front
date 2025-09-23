@@ -283,7 +283,7 @@ export function Toolbox({
               <DraggableItem key={index} type={item.type} subType={item.subType} color={item.color} size={presetSize}>
                 <div className="cursor-grab active:cursor-grabbing">
                   {(item.subType === "cone" || item.subType === "cone-orange") && (
-                    <div className="w-0 h-0 border-l-[8px] border-r-[8px] border-b-[14px] border-l-transparent border-r-transparent border-b-orange-500" />
+                    <div className="w-0 h-0 border-l-[16px] border-r-[16px] border-b-[28px] border-l-transparent border-r-transparent border-b-red-500" />
                   )}
                   {item.subType === "line" && <div className="w-8 h-1 bg-black" />}
                   {item.subType === "circle" && (
