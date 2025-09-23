@@ -129,7 +129,7 @@ export default function BuildDrillPage() {
   const addElement = (element: Omit<DrillElement, "id">) => {
     // If adding a cone, inherit attributes from last cone of same subtype
     let inherited: Partial<DrillElement> = {}
-    if (element.type === "equipment" && (element.subType === "cone-orange" || element.subType === "cone-blue")) {
+    if (element.type === "equipment" && (element.subType === "cone" || element.subType === "cone-orange" || element.subType === "cone-blue")) {
       const existing = framesRef.current[currentFrameRef.current].elements
         .filter((el) => el.type === "equipment" && el.subType === element.subType)
         .slice(-1)[0]

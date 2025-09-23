@@ -53,7 +53,7 @@ export const DrillStage = React.forwardRef<any, DrillStageProps>(function DrillS
     if (!el) return false
     if (el.type === "movement" || el.type === "player") return true
     if (el.type === "equipment") {
-      return el.subType === "cone-orange" || el.subType === "cone-blue"
+      return el.subType === "cone" || el.subType === "cone-orange" || el.subType === "cone-blue"
     }
     return false
   }
@@ -84,7 +84,7 @@ export const DrillStage = React.forwardRef<any, DrillStageProps>(function DrillS
         // Cones: allow rotate only, disable resize
         const allCones = selectedElements.length > 0 && selectedElements.every((id) => {
           const el = elements.find((e) => e.id === id)
-          return el?.type === "equipment" && (el.subType === "cone-orange" || el.subType === "cone-blue")
+          return el?.type === "equipment" && (el.subType === "cone" || el.subType === "cone-orange" || el.subType === "cone-blue")
         })
 
         transformerRef.current.resizeEnabled(!allCones)
@@ -218,6 +218,7 @@ export const DrillStage = React.forwardRef<any, DrillStageProps>(function DrillS
         }
 
         switch (el.subType) {
+          case "cone":
           case "cone-orange":
           case "cone-blue":
             return (

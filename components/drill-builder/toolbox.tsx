@@ -69,8 +69,7 @@ export function Toolbox({
   ]
 
   const equipmentItems = [
-    { type: "equipment", subType: "cone-orange", color: presetColor },
-    { type: "equipment", subType: "cone-blue", color: presetColor },
+    { type: "equipment", subType: "cone", color: presetColor },
     { type: "equipment", subType: "line", color: presetColor },
     { type: "equipment", subType: "circle", color: presetColor },
     { type: "equipment", subType: "square", color: presetColor },
@@ -283,17 +282,17 @@ export function Toolbox({
             {equipmentItems.map((item, index) => (
               <DraggableItem key={index} type={item.type} subType={item.subType} color={item.color} size={presetSize}>
                 <div className="cursor-grab active:cursor-grabbing">
-                  {item.subType === "cone-orange" && (
+                  {(item.subType === "cone" || item.subType === "cone-orange") && (
                     <div className="w-0 h-0 border-l-[8px] border-r-[8px] border-b-[14px] border-l-transparent border-r-transparent border-b-orange-500" />
-                  )}
-                  {item.subType === "cone-blue" && (
-                    <div className="w-0 h-0 border-l-[8px] border-r-[8px] border-b-[14px] border-l-transparent border-r-transparent border-b-blue-500" />
                   )}
                   {item.subType === "line" && <div className="w-8 h-1 bg-black" />}
                   {item.subType === "circle" && (
                     <div className="w-6 h-6 rounded-full border border-gray-800 bg-white" />
                   )}
                   {item.subType === "square" && <div className="w-6 h-6 border border-gray-800 bg-white" />}
+                  {item.subType === "cone-blue" && (
+                    <div className="w-0 h-0 border-l-[8px] border-r-[8px] border-b-[14px] border-l-transparent border-r-transparent border-b-blue-500" />
+                  )}
                 </div>
               </DraggableItem>
             ))}

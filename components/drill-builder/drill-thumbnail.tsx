@@ -19,6 +19,7 @@ export function DrillThumbnail({ element, width = 160, height = 100 }: Props) {
         return <Circle x={el.x * width} y={el.y * height} radius={8 * sizeF} fill={color} stroke="black" strokeWidth={1} />
       case "equipment":
         switch (el.subType) {
+          case "cone":
           case "cone-orange":
           case "cone-blue":
             return <RegularPolygon x={el.x * width} y={el.y * height} sides={3} radius={8 * sizeF} fill={color} rotation={180} />

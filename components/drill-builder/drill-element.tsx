@@ -86,7 +86,7 @@ export function DrillElementComponent({ element, isSelected, onClick, onMove, on
       case "equipment":
         return (
           <div className={isSelected ? "ring-2 ring-black rounded" : ""} style={sizeStyle}>
-            {element.subType === "cone-orange" && (
+            {(element.subType === "cone" || element.subType === "cone-orange") && (
               <div
                 className="w-0 h-0 border-l-[8px] border-r-[8px] border-b-[14px] border-l-transparent border-r-transparent"
                 style={{ borderBottomColor: element.color || "#f97316" }}
