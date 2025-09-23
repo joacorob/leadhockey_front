@@ -49,6 +49,7 @@ export async function GET(request: NextRequest) {
       },
     })
     const data = await externalResponse.json()
+    console.log(JSON.stringify(data, null, 2))
     return NextResponse.json(data, { status: externalResponse.status })
   } catch {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
