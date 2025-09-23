@@ -121,10 +121,6 @@ export function FrameControls({
               </Button>
             )}
 
-            <Button variant="default" size="sm" onClick={onDownloadAll}>
-              <Download className="w-4 h-4 mr-1" />
-              Download PDF
-            </Button>
             {!readOnly && (
               <>
                 <Button variant="default" size="sm" onClick={onPreviewVideo} disabled={isGenerating}>

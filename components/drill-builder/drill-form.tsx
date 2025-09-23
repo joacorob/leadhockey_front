@@ -102,7 +102,7 @@ export function DrillForm({ data, onChange }: DrillFormProps) {
       {/* Right side – description */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-        <ReactQuill value={data.description} onChange={(val)=>updateField('description',val)} theme="snow" className="bg-white h-64" />
+        <ReactQuill value={data.description} onChange={(val)=>updateField('description',val)} theme="snow" className="bg-white" />
       </div>
     </div>
   )

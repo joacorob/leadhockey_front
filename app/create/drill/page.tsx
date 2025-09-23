@@ -18,6 +18,7 @@ import {
   DialogClose,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
+import { Download, Save } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
 
@@ -481,18 +482,44 @@ export default function BuildDrillPage() {
               {/* Page Title */}
               <div className="flex items-center justify-between mb-6">
                 <h1 className="text-2xl font-bold text-gray-900">BUILD A DRILL</h1>
-                <Button onClick={handleDownloadVideo} variant="default" size="sm" disabled={isDownloadingVideo || isGeneratingGif}>
-                  {isDownloadingVideo || isGeneratingGif ? 'Generating video…' : 'Download Video'}
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={handleSaveDrill}
+                    variant="default"
+                    size="sm"
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    <Save className="w-4 h-4 mr-1" />
+                    Save Drill
+                  </Button>
+
+                  <Button onClick={downloadAllFrames} variant="default" size="sm">
+                    <Download className="w-4 h-4 mr-1" />
+                    Download PDF
+                  </Button>
+
+                  <Button
+                    onClick={handleDownloadVideo}
+                    variant="default"
+                    size="sm"
+                    disabled={isDownloadingVideo || isGeneratingGif}
+                  >
+                    {isDownloadingVideo || isGeneratingGif ? (
+                      "Generating video…"
+                    ) : (
+                      <>
+                        <Download className="w-4 h-4 mr-1" />
+                        Download Video
+                      </>
+                    )}
+                  </Button>
+                </div>
               </div>
 
               {/* Form Section */}
               <DrillForm data={drillData} onChange={setDrillData} />
 
-              {/* Save Drill CTA */}
-              <div className="mb-4">
-                <Button onClick={handleSaveDrill} variant="default">Save Drill</Button>
-              </div>
+              {/* Save Drill CTA removed (now in header) */}
 
               {/* Frame Controls */}
               <FrameControls
