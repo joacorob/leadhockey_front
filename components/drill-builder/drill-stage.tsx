@@ -36,9 +36,9 @@ export const DrillStage = React.forwardRef<any, DrillStageProps>(function DrillS
 
   // Refs to Konva nodes of elements
   const nodeRefs = React.useRef(new Map<string, any>())
+  // Generic transformer to handle movement, player and selected equipment (cones)
   const transformerRef = React.useRef<any>(null)
   // Separate transformer for movement elements to control resize & rotate
-  const movementTransformerRef = React.useRef<any>(null)
   // expose nodeRefs via stageRef for external access (e.g., GIF export)
   React.useEffect(() => {
     if (stageRef.current) {
@@ -48,29 +48,52 @@ export const DrillStage = React.forwardRef<any, DrillStageProps>(function DrillS
   // Flag to show transformer explicitly via double-click
   const [showTransformer, setShowTransformer] = React.useState(false)
 
-  // Update transformer nodes when selection changes
-  React.useEffect(() => {
-    // generic selection highlight (stroke yellow) already handled per node.
+  // Determine which elements can be transformed / rotated
+  const isTransformable = (el?: DrillElement) => {
+    if (!el) return false
+    if (el.type === "movement" || el.type === "player") return true
+    if (el.type === "equipment") {
+      return el.subType === "cone-orange" || el.subType === "cone-blue"
+    }
+    return false
+  }
 
-    // Show movement transformer only when every selected element is type="movement"
-    const allMovement = showTransformer && selectedElements.length>0 && selectedElements.every((id)=>{
-      const el = elements.find((e)=>e.id===id)
-      return el?.type === "movement"
+  const isRotatable = isTransformable // same rule for now; adjust if needed
+
+  // Update transformer nodes when selection changes or visibility toggles
+  React.useEffect(() => {
+    const canShow = showTransformer && selectedElements.length > 0 && selectedElements.every((id) => {
+      const el = elements.find((e) => e.id === id)
+      return isTransformable(el)
     })
 
-    if (movementTransformerRef.current) {
-      if (!allMovement) {
-        if(process.env.NODE_ENV!=='production') console.log('Transformer hidden - conditions not met', selectedElements)
-        movementTransformerRef.current.nodes([])
-        movementTransformerRef.current.getLayer()?.batchDraw()
+    if (transformerRef.current) {
+      if (!canShow) {
+        transformerRef.current.nodes([])
+        transformerRef.current.getLayer()?.batchDraw()
       } else {
-        const nodes = selectedElements.map((id)=>nodeRefs.current.get(id)).filter(Boolean)
-        if(process.env.NODE_ENV!=='production') console.log('Setting transformer nodes', nodes.length, nodes)
-        movementTransformerRef.current.nodes(nodes)
-        movementTransformerRef.current.getLayer()?.batchDraw()
+        const nodes = selectedElements.map((id) => nodeRefs.current.get(id)).filter(Boolean)
+        transformerRef.current.nodes(nodes)
+
+        const allowRotation = selectedElements.every((id) => {
+          const el = elements.find((e) => e.id === id)
+          return isRotatable(el)
+        })
+        transformerRef.current.rotateEnabled(allowRotation)
+
+        // Cones: allow rotate only, disable resize
+        const allCones = selectedElements.length > 0 && selectedElements.every((id) => {
+          const el = elements.find((e) => e.id === id)
+          return el?.type === "equipment" && (el.subType === "cone-orange" || el.subType === "cone-blue")
+        })
+
+        transformerRef.current.resizeEnabled(!allCones)
+        transformerRef.current.enabledAnchors(allCones ? [] : ["middle-left","middle-right","top-center","bottom-center"])
+
+        transformerRef.current.getLayer()?.batchDraw()
       }
     }
-  },[selectedElements,elements,showTransformer])
+  }, [selectedElements, elements, showTransformer])
 
   // For group dragging delta calculations
   const dragAnchor = React.useRef<{ x: number; y: number } | null>(null)
@@ -353,7 +376,7 @@ export const DrillStage = React.forwardRef<any, DrillStageProps>(function DrillS
         {elements.map((el) => renderElement(el))}
         {/* Transformer for movement elements */}
         <Transformer
-          ref={movementTransformerRef}
+          ref={transformerRef}
           rotationEnabled={true}
           resizeEnabled={true}
           enabledAnchors={["middle-left","middle-right","top-center","bottom-center"]}
@@ -363,7 +386,7 @@ export const DrillStage = React.forwardRef<any, DrillStageProps>(function DrillS
             return newBox
           }}
           onTransformEnd={(e:any)=>{
-            const tr = movementTransformerRef.current
+            const tr = transformerRef.current
             if(!tr) return
             const nodes = tr.nodes() || []
             nodes.forEach((n:any)=>{
