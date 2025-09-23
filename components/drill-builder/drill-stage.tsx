@@ -53,7 +53,13 @@ export const DrillStage = React.forwardRef<any, DrillStageProps>(function DrillS
     if (!el) return false
     if (el.type === "movement" || el.type === "player") return true
     if (el.type === "equipment") {
-      return el.subType === "cone" || el.subType === "cone-orange" || el.subType === "cone-blue"
+      return (
+        el.subType === "cone" ||
+        el.subType === "cone-orange" ||
+        el.subType === "cone-blue" ||
+        el.subType === "circle" ||
+        el.subType === "square"
+      )
     }
     return false
   }
@@ -82,13 +88,14 @@ export const DrillStage = React.forwardRef<any, DrillStageProps>(function DrillS
         transformerRef.current.rotateEnabled(allowRotation)
 
         // Cones: allow rotate only, disable resize
-        const allCones = selectedElements.length > 0 && selectedElements.every((id) => {
+        const noResizeSet = new Set(["cone","cone-orange","cone-blue","circle","square"])
+        const allNoResize = selectedElements.length > 0 && selectedElements.every((id) => {
           const el = elements.find((e) => e.id === id)
-          return el?.type === "equipment" && (el.subType === "cone" || el.subType === "cone-orange" || el.subType === "cone-blue")
+          return el?.type === "equipment" && noResizeSet.has(el.subType as string)
         })
 
-        transformerRef.current.resizeEnabled(!allCones)
-        transformerRef.current.enabledAnchors(allCones ? [] : ["middle-left","middle-right","top-center","bottom-center"])
+        transformerRef.current.resizeEnabled(!allNoResize)
+        transformerRef.current.enabledAnchors(allNoResize ? [] : ["middle-left","middle-right","top-center","bottom-center"])
 
         transformerRef.current.getLayer()?.batchDraw()
       }
@@ -265,10 +272,17 @@ export const DrillStage = React.forwardRef<any, DrillStageProps>(function DrillS
                 {...commonProps}
                 ref={setNodeRef}
                 radius={size}
-                fill="#ffffff"
-                stroke={isSel ? "black" : "#1f2937"}
-                strokeWidth={isSel ? 4 : 2}
-                {...selShadow}
+                fill={el.color || "#ffffff"}
+                stroke="#1f2937"
+                strokeWidth={2}
+                rotation={el.rotation || 0}
+                onTransformEnd={(e: any) => {
+                  const node = e.target
+                  const scale = node.scaleX()
+                  const rot = node.rotation()
+                  node.scale({ x: 1, y: 1 })
+                  onUpdateElement(el.id, { size: (el.size || 1) * scale, rotation: rot })
+                }}
               />
             )
           case "square":
@@ -279,10 +293,17 @@ export const DrillStage = React.forwardRef<any, DrillStageProps>(function DrillS
                 width={size * 2}
                 height={size * 2}
                 offset={{ x: size, y: size }}
-                fill="#ffffff"
-                stroke={isSel ? "black" : "#1f2937"}
-                strokeWidth={isSel ? 4 : 2}
-                {...selShadow}
+                fill={el.color || "#ffffff"}
+                stroke="#1f2937"
+                strokeWidth={2}
+                rotation={el.rotation || 0}
+                onTransformEnd={(e: any) => {
+                  const node = e.target
+                  const scale = node.scaleX()
+                  const rot = node.rotation()
+                  node.scale({ x: 1, y: 1 })
+                  onUpdateElement(el.id, { size: (el.size || 1) * scale, rotation: rot })
+                }}
               />
             )
           case "line":

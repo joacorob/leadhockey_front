@@ -71,8 +71,8 @@ export function Toolbox({
   const equipmentItems = [
     { type: "equipment", subType: "cone", color: presetColor },
     { type: "equipment", subType: "line", color: presetColor },
-    { type: "equipment", subType: "circle", color: presetColor },
-    { type: "equipment", subType: "square", color: presetColor },
+    { type: "equipment", subType: "circle", color: "#ffffff" },
+    { type: "equipment", subType: "square", color: "#ffffff" },
   ]
 
   const movementItems = [
@@ -105,8 +105,9 @@ export function Toolbox({
     "#ec4899",
     "#f43f5e",
     "#000000",
-    "#6b7280",
+    // removed gray to make space for transparent
     "#ffffff",
+    "transparent",
   ]
 
   const handleSizeChange = (value: number[]) => {
@@ -160,7 +161,7 @@ export function Toolbox({
                 value={[presetSize]}
                 onValueChange={handlePresetSizeChange}
                 min={0.5}
-                max={3}
+                max={5}
                 step={0.1}
                 className="w-full"
               />
@@ -179,8 +180,17 @@ export function Toolbox({
                     className={`w-6 h-6 rounded border-2 ${
                       presetColor === color ? "border-gray-800" : "border-gray-300"
                     }`}
-                    style={{ backgroundColor: color }}
-                    title={color}
+                    style={
+                      color === "transparent"
+                        ? {
+                            backgroundColor: "transparent",
+                            backgroundImage:
+                              "repeating-conic-gradient(#ccc 0% 25%, transparent 0% 50%)",
+                            backgroundSize: "8px 8px",
+                          }
+                        : { backgroundColor: color }
+                    }
+                    title={color === "transparent" ? "transparent" : color}
                   />
                 ))}
               </div>
@@ -203,7 +213,7 @@ export function Toolbox({
                 value={[selectedElement.size || 1]}
                 onValueChange={handleSizeChange}
                 min={0.5}
-                max={3}
+                max={5}
                 step={0.1}
                 className="w-full"
               />
@@ -222,8 +232,17 @@ export function Toolbox({
                     className={`w-6 h-6 rounded border-2 ${
                       selectedElement.color === color ? "border-gray-800" : "border-gray-300"
                     }`}
-                    style={{ backgroundColor: color }}
-                    title={color}
+                    style={
+                      color === "transparent"
+                        ? {
+                            backgroundColor: "transparent",
+                            backgroundImage:
+                              "repeating-conic-gradient(#ccc 0% 25%, transparent 0% 50%)",
+                            backgroundSize: "8px 8px",
+                          }
+                        : { backgroundColor: color }
+                    }
+                    title={color === "transparent" ? "transparent" : color}
                   />
                 ))}
               </div>
