@@ -55,14 +55,40 @@ export function usePaginatedApi<T>(
         page: pagination.page,
         limit: pagination.limit
       })
-      setData(result.data)
-      setPagination(result.pagination)
+      console.log('Paginated API result', result)
+      // Support multiple response shapes:
+      const raw: any = result
+      let items: T[] = []
+      if (Array.isArray(raw.data)) items = raw.data
+      else if (Array.isArray(raw.items)) items = raw.items
+      else if (Array.isArray(raw.data?.items)) items = raw.data.items
+
+      setData(items)
+
+      // Extract pagination flexibly
+      const p: any = raw.pagination ?? raw.data?.pagination ?? {}
+
+      const page = p.page ?? raw.page ?? raw.data?.page ?? 1
+      const totalPages = p.totalPages ?? raw.totalPages ?? raw.data?.totalPages ?? 1
+      const limit = p.limit ?? raw.limit ?? raw.data?.limit ?? pagination.limit
+      const total = p.total ?? raw.totalItems ?? raw.data?.totalItems ?? 0
+      const hasNext = p.hasNext ?? raw.hasNext ?? raw.data?.hasNext ?? page < totalPages
+      const hasPrev = p.hasPrev ?? raw.hasPrev ?? raw.data?.hasPrev ?? page > 1
+
+      setPagination({
+        page,
+        limit,
+        total,
+        totalPages,
+        hasNext,
+        hasPrev,
+      })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred')
     } finally {
       setLoading(false)
     }
-  }, [endpoint, JSON.stringify(params), pagination.page, pagination.limit])
+  }, [endpoint, JSON.stringify(params), pagination?.page, pagination?.limit])
 
   useEffect(() => {
     fetchData()

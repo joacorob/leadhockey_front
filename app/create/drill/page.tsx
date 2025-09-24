@@ -18,6 +18,9 @@ import {
   DialogClose,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
+import { Download, Save } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { useToast } from "@/hooks/use-toast"
 
 export interface DrillElement {
   id: string
@@ -40,17 +43,25 @@ export interface DrillFrame {
 
 export default function BuildDrillPage() {
   const [frames, setFrames] = useState<DrillFrame[]>([{ id: "frame-1", name: "Frame 1", elements: [] }])
+  const framesRef = useRef<DrillFrame[]>([{ id: "frame-1", name: "Frame 1", elements: [] }])
   const stageRef = useRef<any>(null)
   const [currentFrameIndex, setCurrentFrameIndex] = useState(0)
   const currentFrameRef = useRef(0)
   useEffect(() => {
     currentFrameRef.current = currentFrameIndex
   }, [currentFrameIndex])
+
+  // Keep a ref with latest frames for synchronous reads (e.g., inheritance)
+  useEffect(() => {
+    framesRef.current = frames
+  }, [frames])
   const [selectedElements, setSelectedElements] = useState<string[]>([])
   const [playerCounters, setPlayerCounters] = useState<{ [frameIndex: number]: { [key: string]: number } }>({})
   const [gifUrl, setGifUrl] = useState<string | null>(null)
   const [isGifModalOpen, setGifModalOpen] = useState(false)
   const [isGeneratingGif, setGeneratingGif] = useState(false)
+  const [speed,setSpeed]=useState<'slow'|'regular'|'fast'>('regular')
+  const [isDownloadingVideo,setDownloadingVideo]=useState(false)
   const [playKey, setPlayKey] = useState(0)
   const [gifLoaded, setGifLoaded] = useState(false)
 
@@ -58,6 +69,7 @@ export default function BuildDrillPage() {
 
   const [drillData, setDrillData] = useState({
     title: "New Training Session",
+    description: "",
     date: "07/08/2025",
     coach: "Your name",
     gameplay: "Gameplay",
@@ -65,6 +77,47 @@ export default function BuildDrillPage() {
     level: "All levels",
     players: "Available players",
   })
+
+  const router = useRouter()
+  const { toast } = useToast()
+
+  const handleSaveDrill = async () => {
+    try {
+      const payload = {
+        title: drillData.title,
+        description: drillData.description || undefined,
+        frames: frames.map((f, idx) => ({
+          order_index: idx,
+          elements: f.elements.map((el) => ({
+            icon_path: `${el.type}/${el.subType}`,
+            x: el.x / 900,
+            y: el.y / 600,
+            rotation: el.rotation || 0,
+            scale: el.size || 1,
+            text: el.text || null,
+            color: el.color || null,
+          })),
+        })),
+      }
+
+      const res = await fetch("/api/drills", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      })
+
+      const data = await res.json()
+
+      if (res.ok) {
+        toast({ title: "Drill saved" })
+        router.push(`/drills/${data.id || data?.data?.id}`)
+      } else {
+        toast({ title: "Error", description: data.error || "Failed to save drill", variant: "destructive" })
+      }
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" })
+    }
+  }
 
   const currentFrame = frames[currentFrameIndex]
   const currentPlayerCounters = playerCounters[currentFrameIndex] || {}
@@ -77,11 +130,29 @@ export default function BuildDrillPage() {
   }
 
   const addElement = (element: Omit<DrillElement, "id">) => {
+    // If adding a cone, inherit attributes from last cone of same subtype
+    let inherited: Partial<DrillElement> = {}
+    if (element.type === "equipment" && (element.subType === "cone" || element.subType === "cone-orange" || element.subType === "cone-blue")) {
+      const existing = framesRef.current[currentFrameRef.current].elements
+        .filter((el) => el.type === "equipment" && el.subType === element.subType)
+        .slice(-1)[0]
+      if (existing) {
+        inherited = {
+          color: existing.color,
+          size: existing.size,
+          rotation: existing.rotation,
+        }
+      }
+    }
+
     const newElement: DrillElement = {
       ...element,
+      ...inherited,
       id: `${element.type}-${Date.now()}-${Math.random()}`,
-      size: element.size || 1, // Use provided size or default to 1
-      rotation: 0,
+      size: inherited.size ?? element.size ?? 1,
+      rotation: inherited.rotation ?? 0,
+      // Store the player number inside text so it is persisted and rendered
+      text: element.type === "player" ? String(element.label ?? element.text ?? "") : element.text,
     }
 
     const idx = currentFrameRef.current
@@ -120,13 +191,18 @@ export default function BuildDrillPage() {
     const elementToRemove = currentFrame.elements.find((el) => el.id === id)
     if (elementToRemove && elementToRemove.type === "player" && elementToRemove.subType !== "coach") {
       const key = elementToRemove.subType
-      setPlayerCounters((prev) => ({
-        ...prev,
-        [currentFrameIndex]: {
-          ...prev[currentFrameIndex],
-          [key]: Math.max(0, (prev[currentFrameIndex]?.[key] || 1) - 1),
-        },
-      }))
+      setPlayerCounters((prev) => {
+        const current = prev[currentFrameIndex]?.[key] || 0
+        const removedNumber = parseInt(String(elementToRemove.text ?? elementToRemove.label ?? "0"), 10)
+        const newCount = removedNumber === current ? Math.max(0, current - 1) : current
+        return {
+          ...prev,
+          [currentFrameIndex]: {
+            ...prev[currentFrameIndex],
+            [key]: newCount,
+          },
+        }
+      })
     }
 
     // remove from current and subsequent frames to maintain consistency
@@ -139,28 +215,23 @@ export default function BuildDrillPage() {
 
   const removeSelectedElements = () => {
     const elementsToRemove = currentFrame.elements.filter((el) => selectedElements.includes(el.id))
-    const playerUpdates: { [key: string]: number } = {}
-
-    elementsToRemove.forEach((element) => {
-      if (element.type === "player" && element.subType !== "coach") {
-        playerUpdates[element.subType] = (playerUpdates[element.subType] || 0) + 1
-      }
-    })
-
-    if (Object.keys(playerUpdates).length > 0) {
-      setPlayerCounters((prev) => ({
-        ...prev,
-        [currentFrameIndex]: {
-          ...prev[currentFrameIndex],
-          ...Object.keys(playerUpdates).reduce(
-            (acc, key) => ({
-              ...acc,
-              [key]: Math.max(0, (prev[currentFrameIndex]?.[key] || 0) - playerUpdates[key]),
-            }),
-            {},
-          ),
-        },
-      }))
+    if (elementsToRemove.length > 0) {
+      setPlayerCounters((prev) => {
+        const newFrameCounters = { ...(prev[currentFrameIndex] || {}) }
+        elementsToRemove.forEach((element) => {
+          if (element.type !== "player" || element.subType === "coach") return
+          const key = element.subType
+          const current = newFrameCounters[key] || 0
+          const removedNumber = parseInt(String(element.text ?? element.label ?? "0"), 10)
+          if (removedNumber === current) {
+            newFrameCounters[key] = Math.max(0, current - 1)
+          }
+        })
+        return {
+          ...prev,
+          [currentFrameIndex]: newFrameCounters,
+        }
+      })
     }
 
     setFrames((prevFrames) =>
@@ -267,6 +338,7 @@ export default function BuildDrillPage() {
 
   // === GIF EXPORT ===
   const exportGif = async ({ delay, width }: { delay: number; width: number }) => {
+    // kept for backwards compatibility – called internally via handlePreviewVideo
     setGeneratingGif(true)
     // Uso la versión browser que embebe el worker, así evitamos problemas de CORS
     // @ts-ignore – librería no tiene tipos
@@ -342,6 +414,43 @@ export default function BuildDrillPage() {
     gif.render()
   }
 
+  const handleDownloadVideo=async()=>{
+    if(gifUrl){
+      // trigger download immediately
+      const link=document.createElement('a')
+      link.href=gifUrl
+      link.download='training_frames.gif'
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      return
+    }
+    setDownloadingVideo(true)
+    await exportGif({delay:delayMap[speed],width:900})
+    // recursion safety: gif generated now -> call again
+    setDownloadingVideo(false)
+    if(gifUrl){
+      handleDownloadVideo()
+    }
+  }
+
+  const delayMap:{[k in 'slow'|'regular'|'fast']:number}={slow:1200,regular:800,fast:400}
+
+  const handlePreviewVideo=async()=>{
+    if(gifUrl && !isGeneratingGif){
+      setGifModalOpen(true)
+      return
+    }
+    await exportGif({delay:delayMap[speed],width:900})
+    setGifModalOpen(true)
+  }
+
+  const handleSpeedChange=(s:'slow'|'regular'|'fast')=>{
+    setSpeed(s)
+    // invalidate existing gif so it regenerates on next preview
+    setGifUrl(null)
+  }
+
   const getSelectedElement = () => {
     if (selectedElements.length === 1) {
       return currentFrame.elements.find((el) => el.id === selectedElements[0])
@@ -371,10 +480,46 @@ export default function BuildDrillPage() {
           <main className="flex-1 p-6 overflow-auto">
             <div className="max-w-full mx-auto">
               {/* Page Title */}
-              <h1 className="text-2xl font-bold text-gray-900 mb-6">BUILD A DRILL</h1>
+              <div className="flex items-center justify-between mb-6">
+                <h1 className="text-2xl font-bold text-gray-900">BUILD A DRILL</h1>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={handleSaveDrill}
+                    variant="default"
+                    size="sm"
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    <Save className="w-4 h-4 mr-1" />
+                    Save Drill
+                  </Button>
+
+                  <Button onClick={downloadAllFrames} variant="default" size="sm">
+                    <Download className="w-4 h-4 mr-1" />
+                    Download PDF
+                  </Button>
+
+                  <Button
+                    onClick={handleDownloadVideo}
+                    variant="default"
+                    size="sm"
+                    disabled={isDownloadingVideo || isGeneratingGif}
+                  >
+                    {isDownloadingVideo || isGeneratingGif ? (
+                      "Generating video…"
+                    ) : (
+                      <>
+                        <Download className="w-4 h-4 mr-1" />
+                        Download Video
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
 
               {/* Form Section */}
               <DrillForm data={drillData} onChange={setDrillData} />
+
+              {/* Save Drill CTA removed (now in header) */}
 
               {/* Frame Controls */}
               <FrameControls
@@ -386,12 +531,12 @@ export default function BuildDrillPage() {
                 onRemoveFrame={removeFrame}
                 onUpdateFrameName={updateFrameName}
                 onDownloadAll={downloadAllFrames}
-                onExportGif={exportGif}
                 selectedCount={selectedElements.length}
                 onDeleteSelected={removeSelectedElements}
-                gifUrl={gifUrl}
-                onViewGif={handleViewGif}
-                isGeneratingGif={isGeneratingGif}
+                onPreviewVideo={handlePreviewVideo}
+                speed={speed}
+                onChangeSpeed={handleSpeedChange}
+                isGenerating={isGeneratingGif}
               />
 
               {/* Main Content Area */}
@@ -413,7 +558,7 @@ export default function BuildDrillPage() {
                 </div>
 
                 {/* Canvas */}
-                <div className="flex-1 min-w-0">
+                <div>
                   <DrillStage
                     ref={stageRef}
                     elements={currentFrame.elements}

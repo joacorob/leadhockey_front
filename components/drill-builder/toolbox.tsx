@@ -65,15 +65,14 @@ export function Toolbox({
       label: (playerCounters.team2 || 0) + 1,
       size: playerPresets.team2.size,
     },
-    { type: "player", subType: "coach", color: "#000000", label: "C", size: presetSize },
+    { type: "player", subType: "coach", color: "#000000", label: "G", size: presetSize },
   ]
 
   const equipmentItems = [
-    { type: "equipment", subType: "cone-orange", color: presetColor },
-    { type: "equipment", subType: "cone-blue", color: presetColor },
+    { type: "equipment", subType: "cone", color: presetColor },
     { type: "equipment", subType: "line", color: presetColor },
-    { type: "equipment", subType: "circle", color: presetColor },
-    { type: "equipment", subType: "square", color: presetColor },
+    { type: "equipment", subType: "circle", color: "#ffffff" },
+    { type: "equipment", subType: "square", color: "#ffffff" },
   ]
 
   const movementItems = [
@@ -106,8 +105,9 @@ export function Toolbox({
     "#ec4899",
     "#f43f5e",
     "#000000",
-    "#6b7280",
+    // removed gray to make space for transparent
     "#ffffff",
+    "transparent",
   ]
 
   const handleSizeChange = (value: number[]) => {
@@ -161,7 +161,7 @@ export function Toolbox({
                 value={[presetSize]}
                 onValueChange={handlePresetSizeChange}
                 min={0.5}
-                max={3}
+                max={5}
                 step={0.1}
                 className="w-full"
               />
@@ -180,8 +180,17 @@ export function Toolbox({
                     className={`w-6 h-6 rounded border-2 ${
                       presetColor === color ? "border-gray-800" : "border-gray-300"
                     }`}
-                    style={{ backgroundColor: color }}
-                    title={color}
+                    style={
+                      color === "transparent"
+                        ? {
+                            backgroundColor: "transparent",
+                            backgroundImage:
+                              "repeating-conic-gradient(#ccc 0% 25%, transparent 0% 50%)",
+                            backgroundSize: "8px 8px",
+                          }
+                        : { backgroundColor: color }
+                    }
+                    title={color === "transparent" ? "transparent" : color}
                   />
                 ))}
               </div>
@@ -204,7 +213,7 @@ export function Toolbox({
                 value={[selectedElement.size || 1]}
                 onValueChange={handleSizeChange}
                 min={0.5}
-                max={3}
+                max={5}
                 step={0.1}
                 className="w-full"
               />
@@ -223,8 +232,17 @@ export function Toolbox({
                     className={`w-6 h-6 rounded border-2 ${
                       selectedElement.color === color ? "border-gray-800" : "border-gray-300"
                     }`}
-                    style={{ backgroundColor: color }}
-                    title={color}
+                    style={
+                      color === "transparent"
+                        ? {
+                            backgroundColor: "transparent",
+                            backgroundImage:
+                              "repeating-conic-gradient(#ccc 0% 25%, transparent 0% 50%)",
+                            backgroundSize: "8px 8px",
+                          }
+                        : { backgroundColor: color }
+                    }
+                    title={color === "transparent" ? "transparent" : color}
                   />
                 ))}
               </div>
@@ -283,17 +301,17 @@ export function Toolbox({
             {equipmentItems.map((item, index) => (
               <DraggableItem key={index} type={item.type} subType={item.subType} color={item.color} size={presetSize}>
                 <div className="cursor-grab active:cursor-grabbing">
-                  {item.subType === "cone-orange" && (
-                    <div className="w-0 h-0 border-l-[8px] border-r-[8px] border-b-[14px] border-l-transparent border-r-transparent border-b-orange-500" />
-                  )}
-                  {item.subType === "cone-blue" && (
-                    <div className="w-0 h-0 border-l-[8px] border-r-[8px] border-b-[14px] border-l-transparent border-r-transparent border-b-blue-500" />
+                  {(item.subType === "cone" || item.subType === "cone-orange") && (
+                    <div className="w-0 h-0 border-l-[16px] border-r-[16px] border-b-[28px] border-l-transparent border-r-transparent border-b-red-500" />
                   )}
                   {item.subType === "line" && <div className="w-8 h-1 bg-black" />}
                   {item.subType === "circle" && (
-                    <div className="w-6 h-6 rounded-full border-2 border-gray-800 bg-white" />
+                    <div className="w-6 h-6 rounded-full border border-gray-800 bg-white" />
                   )}
-                  {item.subType === "square" && <div className="w-6 h-6 border-2 border-gray-800 bg-white" />}
+                  {item.subType === "square" && <div className="w-6 h-6 border border-gray-800 bg-white" />}
+                  {item.subType === "cone-blue" && (
+                    <div className="w-0 h-0 border-l-[8px] border-r-[8px] border-b-[14px] border-l-transparent border-r-transparent border-b-blue-500" />
+                  )}
                 </div>
               </DraggableItem>
             ))}

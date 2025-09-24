@@ -1,4 +1,4 @@
-import { Stage, Layer, Image as KonvaImage, Circle, Rect, Arrow, Text as KonvaText, Transformer, Line, RegularPolygon } from "react-konva"
+import { Stage, Layer, Image as KonvaImage, Circle, Rect, Arrow, Text as KonvaText, Transformer, Line, RegularPolygon, Group } from "react-konva"
 import { useDrop } from "react-dnd"
 import useImage from "use-image"
 import type { DrillElement } from "@/app/create/drill/page"
@@ -12,6 +12,7 @@ interface DrillStageProps {
   onRemoveElement: (id: string) => void
   onSelectionChange: (ids: string[]) => void
   onMoveSelected: (dx: number, dy: number) => void
+  interactive?: boolean // new
 }
 
 export const DrillStage = React.forwardRef<any, DrillStageProps>(function DrillStage({
@@ -22,6 +23,7 @@ export const DrillStage = React.forwardRef<any, DrillStageProps>(function DrillS
   onRemoveElement,
   onSelectionChange,
   onMoveSelected,
+  interactive = true,
 }: DrillStageProps, externalRef) {
   // Load field image once
   const [fieldImage] = useImage("/field_drag.png")
@@ -34,9 +36,9 @@ export const DrillStage = React.forwardRef<any, DrillStageProps>(function DrillS
 
   // Refs to Konva nodes of elements
   const nodeRefs = React.useRef(new Map<string, any>())
+  // Generic transformer to handle movement, player and selected equipment (cones)
   const transformerRef = React.useRef<any>(null)
   // Separate transformer for movement elements to control resize & rotate
-  const movementTransformerRef = React.useRef<any>(null)
   // expose nodeRefs via stageRef for external access (e.g., GIF export)
   React.useEffect(() => {
     if (stageRef.current) {
@@ -46,29 +48,59 @@ export const DrillStage = React.forwardRef<any, DrillStageProps>(function DrillS
   // Flag to show transformer explicitly via double-click
   const [showTransformer, setShowTransformer] = React.useState(false)
 
-  // Update transformer nodes when selection changes
-  React.useEffect(() => {
-    // generic selection highlight (stroke yellow) already handled per node.
+  // Determine which elements can be transformed / rotated
+  const isTransformable = (el?: DrillElement) => {
+    if (!el) return false
+    if (el.type === "movement" || el.type === "player") return true
+    if (el.type === "equipment") {
+      return (
+        el.subType === "cone" ||
+        el.subType === "cone-orange" ||
+        el.subType === "cone-blue" ||
+        el.subType === "circle" ||
+        el.subType === "square"
+      )
+    }
+    return false
+  }
 
-    // Show movement transformer only when every selected element is type="movement"
-    const allMovement = showTransformer && selectedElements.length>0 && selectedElements.every((id)=>{
-      const el = elements.find((e)=>e.id===id)
-      return el?.type === "movement"
+  const isRotatable = isTransformable // same rule for now; adjust if needed
+
+  // Update transformer nodes when selection changes or visibility toggles
+  React.useEffect(() => {
+    const canShow = showTransformer && selectedElements.length > 0 && selectedElements.every((id) => {
+      const el = elements.find((e) => e.id === id)
+      return isTransformable(el)
     })
 
-    if (movementTransformerRef.current) {
-      if (!allMovement) {
-        if(process.env.NODE_ENV!=='production') console.log('Transformer hidden - conditions not met', selectedElements)
-        movementTransformerRef.current.nodes([])
-        movementTransformerRef.current.getLayer()?.batchDraw()
+    if (transformerRef.current) {
+      if (!canShow) {
+        transformerRef.current.nodes([])
+        transformerRef.current.getLayer()?.batchDraw()
       } else {
-        const nodes = selectedElements.map((id)=>nodeRefs.current.get(id)).filter(Boolean)
-        if(process.env.NODE_ENV!=='production') console.log('Setting transformer nodes', nodes.length, nodes)
-        movementTransformerRef.current.nodes(nodes)
-        movementTransformerRef.current.getLayer()?.batchDraw()
+        const nodes = selectedElements.map((id) => nodeRefs.current.get(id)).filter(Boolean)
+        transformerRef.current.nodes(nodes)
+
+        const allowRotation = selectedElements.every((id) => {
+          const el = elements.find((e) => e.id === id)
+          return isRotatable(el)
+        })
+        transformerRef.current.rotateEnabled(allowRotation)
+
+        // Cones: allow rotate only, disable resize
+        const noResizeSet = new Set(["cone","cone-orange","cone-blue","circle","square"])
+        const allNoResize = selectedElements.length > 0 && selectedElements.every((id) => {
+          const el = elements.find((e) => e.id === id)
+          return el?.type === "equipment" && noResizeSet.has(el.subType as string)
+        })
+
+        transformerRef.current.resizeEnabled(!allNoResize)
+        transformerRef.current.enabledAnchors(allNoResize ? [] : ["middle-left","middle-right","top-center","bottom-center"])
+
+        transformerRef.current.getLayer()?.batchDraw()
       }
     }
-  },[selectedElements,elements,showTransformer])
+  }, [selectedElements, elements, showTransformer])
 
   // For group dragging delta calculations
   const dragAnchor = React.useRef<{ x: number; y: number } | null>(null)
@@ -77,6 +109,7 @@ export const DrillStage = React.forwardRef<any, DrillStageProps>(function DrillS
     () => ({
       accept: "drill-item",
       drop: (item: any, monitor) => {
+        if (!interactive) return
         if (!stageRef.current) return
         const client = monitor.getClientOffset()
         if (!client) return
@@ -99,10 +132,10 @@ export const DrillStage = React.forwardRef<any, DrillStageProps>(function DrillS
         })
       },
       collect: (monitor) => ({
-        isOver: monitor.isOver(),
+        isOver: interactive ? monitor.isOver() : false,
       }),
     }),
-    [onAddElement],
+    [onAddElement, interactive],
   )
 
   const handleDragEnd = (id: string, e: any) => {
@@ -147,7 +180,7 @@ export const DrillStage = React.forwardRef<any, DrillStageProps>(function DrillS
     const commonProps = {
       x: el.x,
       y: el.y,
-      draggable: !(showTransformer && selectedElements.includes(el.id)),
+      draggable: interactive && !(showTransformer && selectedElements.includes(el.id)),
       onDragStart: handleDragStart,
       onDragMove: (e: any) => handleDragMove(el.id, e),
       onDragEnd: (e: any) => handleDragEnd(el.id, e),
@@ -156,6 +189,13 @@ export const DrillStage = React.forwardRef<any, DrillStageProps>(function DrillS
     }
 
     const isSel = selectedElements.includes(el.id)
+    // Common outline props for selected state
+    const selOutline = isSel
+      ? { stroke: "black", strokeWidth: 4 }
+      : {}
+    const selShadow = isSel
+      ? { shadowEnabled: true, shadowColor: "black", shadowBlur: 4, shadowOpacity: 1, shadowOffset: { x: 0, y: 0 } }
+      : {}
 
     // attach ref to node
     const setNodeRef = (node: any) => {
@@ -163,15 +203,13 @@ export const DrillStage = React.forwardRef<any, DrillStageProps>(function DrillS
     }
 
     switch (el.type) {
-      case "player":
+      case "player": {
+        const radius = (el.size || 1) * 12
+        const fontSize = 14 * (el.size || 1)
         return (
-          <Circle
+          <Group
             key={el.id}
             {...commonProps}
-            radius={(el.size || 1) * 12}
-            fill={el.color || "#2563eb"}
-            stroke={isSel ? "yellow" : "black"}
-            strokeWidth={isSel ? 4 : 1}
             ref={setNodeRef}
             onTransformEnd={(e: any) => {
               const node = e.target
@@ -179,8 +217,26 @@ export const DrillStage = React.forwardRef<any, DrillStageProps>(function DrillS
               node.scale({ x: 1, y: 1 })
               onUpdateElement(el.id, { size: (el.size || 1) * scale })
             }}
-          />
+          >
+            <Circle
+              radius={radius}
+              fill={el.color || "#2563eb"}
+              stroke={isSel ? "black" : undefined}
+              strokeWidth={isSel ? 4 : 0}
+            />
+            <KonvaText
+              text={String(el.text || el.label || "")}
+              fontSize={fontSize}
+              fill="#ffffff"
+              width={radius * 2}
+              align="center"
+              verticalAlign="middle"
+              offsetX={radius}
+              offsetY={fontSize / 2}
+            />
+          </Group>
         )
+      }
       case "equipment": {
         const size = (el.size || 1) * 12
         const onTransformEnd = (e: any) => {
@@ -191,6 +247,7 @@ export const DrillStage = React.forwardRef<any, DrillStageProps>(function DrillS
         }
 
         switch (el.subType) {
+          case "cone":
           case "cone-orange":
           case "cone-blue":
             return (
@@ -204,6 +261,8 @@ export const DrillStage = React.forwardRef<any, DrillStageProps>(function DrillS
                 rotation={180}
                 offset={{ x: 0, y: size / 2 }}
                 onTransformEnd={onTransformEnd}
+                {...selOutline}
+                {...selShadow}
               />
             )
           case "circle":
@@ -213,10 +272,17 @@ export const DrillStage = React.forwardRef<any, DrillStageProps>(function DrillS
                 {...commonProps}
                 ref={setNodeRef}
                 radius={size}
-                fill="#ffffff"
+                fill={el.color || "#ffffff"}
                 stroke="#1f2937"
                 strokeWidth={2}
-                onTransformEnd={onTransformEnd}
+                rotation={el.rotation || 0}
+                onTransformEnd={(e: any) => {
+                  const node = e.target
+                  const scale = node.scaleX()
+                  const rot = node.rotation()
+                  node.scale({ x: 1, y: 1 })
+                  onUpdateElement(el.id, { size: (el.size || 1) * scale, rotation: rot })
+                }}
               />
             )
           case "square":
@@ -227,10 +293,17 @@ export const DrillStage = React.forwardRef<any, DrillStageProps>(function DrillS
                 width={size * 2}
                 height={size * 2}
                 offset={{ x: size, y: size }}
-                fill="#ffffff"
+                fill={el.color || "#ffffff"}
                 stroke="#1f2937"
                 strokeWidth={2}
-                onTransformEnd={onTransformEnd}
+                rotation={el.rotation || 0}
+                onTransformEnd={(e: any) => {
+                  const node = e.target
+                  const scale = node.scaleX()
+                  const rot = node.rotation()
+                  node.scale({ x: 1, y: 1 })
+                  onUpdateElement(el.id, { size: (el.size || 1) * scale, rotation: rot })
+                }}
               />
             )
           case "line":
@@ -242,7 +315,10 @@ export const DrillStage = React.forwardRef<any, DrillStageProps>(function DrillS
                 height={4}
                 offset={{ x: (size * 3) / 2, y: 2 }}
                 fill={el.color || "#000000"}
+                stroke={isSel ? "black" : undefined}
+                strokeWidth={isSel ? 2 : 0}
                 onTransformEnd={onTransformEnd}
+                {...selShadow}
               />
             )
           default:
@@ -267,6 +343,7 @@ export const DrillStage = React.forwardRef<any, DrillStageProps>(function DrillS
                 stroke={color}
                 strokeWidth={3}
                 rotation={el.rotation || 0}
+                {...selShadow}
               />
             )
           case "dotted-line":
@@ -280,6 +357,7 @@ export const DrillStage = React.forwardRef<any, DrillStageProps>(function DrillS
                 dash={[6, 6]}
                 hitStrokeWidth={12}
                 rotation={el.rotation || 0}
+                {...selShadow}
               />
             )
           case "curved-line":
@@ -294,6 +372,7 @@ export const DrillStage = React.forwardRef<any, DrillStageProps>(function DrillS
                 bezier={true}
                 hitStrokeWidth={12}
                 rotation={el.rotation || 0}
+                {...selShadow}
               />
             )
           default:
@@ -307,6 +386,8 @@ export const DrillStage = React.forwardRef<any, DrillStageProps>(function DrillS
             text={el.text || "Text"}
             fontSize={14 * (el.size || 1)}
             fill={el.color || "#000"}
+            {...selOutline}
+            {...selShadow}
             ref={setNodeRef}
             onTransformEnd={(e: any) => {
               const node = e.target
@@ -322,7 +403,7 @@ export const DrillStage = React.forwardRef<any, DrillStageProps>(function DrillS
   }
 
   return (
-    <div ref={(node)=>{ if(node) drop(node); }} className={isOver ? "ring-2 ring-yellow-400 rounded-lg" : ""}>
+    <div ref={(node)=>{ if(node) interactive && drop(node); }} className={isOver ? "ring-2 ring-yellow-400 rounded-lg" : ""}>
       <Stage
         ref={(node)=>{stageRef.current=node; if(externalRef){ if(typeof externalRef==='function'){externalRef(node);} else {externalRef.current=node}} }}
         width={width}
@@ -330,6 +411,7 @@ export const DrillStage = React.forwardRef<any, DrillStageProps>(function DrillS
         className="border rounded-lg shadow"
         tabIndex={0}
         onClick={(e:any)=>{
+          if(!interactive) return
           // Only clear selection when clicking on empty stage
           const stage = e.target.getStage()
           if(e.target === stage){
@@ -348,7 +430,7 @@ export const DrillStage = React.forwardRef<any, DrillStageProps>(function DrillS
         {elements.map((el) => renderElement(el))}
         {/* Transformer for movement elements */}
         <Transformer
-          ref={movementTransformerRef}
+          ref={transformerRef}
           rotationEnabled={true}
           resizeEnabled={true}
           enabledAnchors={["middle-left","middle-right","top-center","bottom-center"]}
@@ -358,7 +440,7 @@ export const DrillStage = React.forwardRef<any, DrillStageProps>(function DrillS
             return newBox
           }}
           onTransformEnd={(e:any)=>{
-            const tr = movementTransformerRef.current
+            const tr = transformerRef.current
             if(!tr) return
             const nodes = tr.nodes() || []
             nodes.forEach((n:any)=>{
