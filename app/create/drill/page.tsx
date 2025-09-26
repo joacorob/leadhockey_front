@@ -60,6 +60,7 @@ export default function BuildDrillPage() {
   const [gifUrl, setGifUrl] = useState<string | null>(null)
   const [isGifModalOpen, setGifModalOpen] = useState(false)
   const [isGeneratingGif, setGeneratingGif] = useState(false)
+  const [isSavingDrill, setSavingDrill] = useState(false)
   const [speed,setSpeed]=useState<'slow'|'regular'|'fast'>('regular')
   const [isDownloadingVideo,setDownloadingVideo]=useState(false)
   const [playKey, setPlayKey] = useState(0)
@@ -82,6 +83,7 @@ export default function BuildDrillPage() {
   const { toast } = useToast()
 
   const handleSaveDrill = async () => {
+    setSavingDrill(true)
     try {
       const payload = {
         title: drillData.title,
@@ -116,6 +118,8 @@ export default function BuildDrillPage() {
       }
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" })
+    } finally {
+      setSavingDrill(false)
     }
   }
 
@@ -488,9 +492,16 @@ export default function BuildDrillPage() {
                     variant="default"
                     size="sm"
                     className="bg-green-600 hover:bg-green-700"
+                    disabled={isSavingDrill}
                   >
-                    <Save className="w-4 h-4 mr-1" />
-                    Save Drill
+                    {isSavingDrill ? (
+                      "Saving Drill…"
+                    ) : (
+                      <>
+                        <Save className="w-4 h-4 mr-1" />
+                        Save Drill
+                      </>
+                    )}
                   </Button>
 
                   <Button onClick={downloadAllFrames} variant="default" size="sm">
