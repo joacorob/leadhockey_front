@@ -130,6 +130,10 @@ export function Toolbox({
     updateActivePreset({ color })
   }
 
+  // Helper to ensure we only treat team1 / team2 as selectable presets
+  const isTeamPlayer = (subType: string): subType is "team1" | "team2" =>
+    subType === "team1" || subType === "team2"
+
   return (
     <Card className="min-h-full">
       <CardHeader className="pb-3">
@@ -275,7 +279,15 @@ export function Toolbox({
           <h3 className="text-xs font-medium text-gray-700 mb-3 uppercase tracking-wide">PLAYERS</h3>
           <div className="flex gap-2">
             {playerItems.map((item, index) => (
-              <div key={index} onClick={() => setActivePlayer(item.subType as "team1" | "team2")} className={activePlayer===item.subType?"ring-2 ring-yellow-400 rounded-full":""}>
+              <div
+                key={index}
+                onClick={() => {
+                  if (isTeamPlayer(item.subType)) {
+                    setActivePlayer(item.subType)
+                  }
+                }}
+                className={isTeamPlayer(item.subType) && activePlayer === item.subType ? "ring-2 ring-yellow-400 rounded-full" : ""}
+              >
                 <DraggableItem
                   type={item.type}
                   subType={item.subType}
