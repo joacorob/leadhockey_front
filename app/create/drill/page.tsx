@@ -82,12 +82,38 @@ export default function BuildDrillPage() {
   const router = useRouter()
   const { toast } = useToast()
 
+  // Helper to capture a PNG snapshot of the very first frame and return raw base64 (without header)
+  const captureThumbnail = async (): Promise<string | undefined> => {
+    if (!stageRef.current) return undefined
+
+    const originalIndex = currentFrameRef.current
+
+    // Switch to first frame if not already there so Stage renders proper contents
+    if (originalIndex !== 0) {
+      setCurrentFrameIndex(0)
+      // Wait a tick so React + Konva have time to render
+      await new Promise((res) => setTimeout(res, 50))
+    }
+
+    const dataUrl: string = stageRef.current.toDataURL({ pixelRatio: 2, mimeType: "image/png" })
+
+    // Restore previous frame
+    if (originalIndex !== 0) {
+      setCurrentFrameIndex(originalIndex)
+    }
+
+    // Strip the "data:image/png;base64," prefix before sending to backend
+    return dataUrl.replace(/^data:image\/png;base64,/, "")
+  }
+
   const handleSaveDrill = async () => {
     setSavingDrill(true)
+    const thumbnailBase64 = await captureThumbnail()
     try {
       const payload = {
         title: drillData.title,
         description: drillData.description || undefined,
+        thumbnail: thumbnailBase64, // backend will decode PNG
         frames: frames.map((f, idx) => ({
           order_index: idx,
           elements: f.elements.map((el) => ({
