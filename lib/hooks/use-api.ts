@@ -22,6 +22,8 @@ export function useApi<T>(endpoint: string, params?: Record<string, any>) {
   }, [endpoint, JSON.stringify(params)])
 
   useEffect(() => {
+    // Clear data immediately when endpoint changes to avoid showing stale items
+    setData([] as any)
     fetchData()
   }, [fetchData])
 

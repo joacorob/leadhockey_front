@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
     const token = (session as any)?.accessToken as string | undefined
 
     const { searchParams } = new URL(request.url)
-    const url = new URL(`${process.env.LEAD_BACKEND}/api/v1/favourites`)
+    const url = new URL(`${process.env.LEAD_BACKEND}/api/v1/favorites`)
     searchParams.forEach((v, k) => url.searchParams.append(k, v))
 
     const res = await fetch(url.toString(), {

@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Button } from "@/components/ui/button"
 import { usePaginatedApi } from "@/lib/hooks/use-api"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { PracticePlanItem } from "@/lib/types/practice-plan"
 
 interface BackendItem {
@@ -28,17 +28,21 @@ export function ItemSelectModal({
 }) {
   const [tab, setTab] = useState<TabKey>("drills")
   const [search, setSearch] = useState("")
+  const listRef = useRef<HTMLDivElement>(null)
   const endpointMap: Record<TabKey, string> = {
     drills: "/drills",
     videos: "/videos",
     favourites: "/favourites",
   }
-  const { data = [], loading } = usePaginatedApi<BackendItem>(endpointMap[tab], { q: search })
+  const { data = [], loading, pagination, nextPage } = usePaginatedApi<BackendItem>(endpointMap[tab], { q: search })
 
   const [selected, setSelected] = useState<Record<number, BackendItem>>({})
 
   useEffect(() => {
     setSelected({}) // reset when tab changes
+    setSearch("")
+    // scroll top
+    listRef.current?.scrollTo({ top: 0 })
   }, [tab])
 
   const toggle = (item: BackendItem) => {
@@ -81,16 +85,27 @@ export function ItemSelectModal({
           <Input placeholder="Search" value={search} onChange={(e) => setSearch(e.target.value)} />
           <Button variant="secondary" onClick={() => {}}>Search</Button>
         </div>
-        <div className="h-80 overflow-y-auto space-y-3 pr-2">
-          {data.map((item) => (
-            <div key={item.id} className="flex items-center gap-3 border p-2 rounded">
-              <img src={item.thumbnail_url} alt="thumb" className="w-14 h-14 object-cover rounded" />
-              <div className="flex-1 text-sm">
-                {item.title}
+        <div
+          className="h-80 overflow-y-auto space-y-3 pr-2"
+          ref={listRef}
+          onScroll={(e) => {
+            const el = e.currentTarget
+            if (el.scrollTop + el.clientHeight >= el.scrollHeight - 50 && !loading && pagination.hasNext) {
+              nextPage()
+            }
+          }}
+        >
+          {data.length === 0 && !loading ? (
+            <p className="text-center text-sm text-gray-500 pt-10">No items found.</p>
+          ) : (
+            data.map((item) => { const thumb = (item as any).thumbnail_url || (item as any).thumbnail || "https://placehold.co/80"; return (
+              <div key={item.id} className="flex items-center gap-3 border p-2 rounded">
+                <img src={thumb} alt="thumb" className="w-14 h-14 object-cover rounded" />
+                <div className="flex-1 text-sm">{item.title}</div>
+                <Checkbox checked={!!selected[item.id]} onCheckedChange={() => toggle(item)} />
               </div>
-              <Checkbox checked={!!selected[item.id]} onCheckedChange={() => toggle(item)} />
-            </div>
-          ))}
+            ); })
+          )}
           {loading && <p className="text-center text-sm text-gray-400">Loading…</p>}
         </div>
         <div className="pt-4 flex justify-end gap-2">

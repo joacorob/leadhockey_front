@@ -6,7 +6,6 @@ export async function GET(request: NextRequest) {
     // Extract access token from NextAuth token cookie
     const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET })
     const accessToken: any = (token as any)?.accessToken
-    console.log("accessToken", accessToken)
 
     // Try to fetch from external API first
     try {
