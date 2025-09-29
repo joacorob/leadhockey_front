@@ -23,12 +23,13 @@ export function FilterSelect({
   className 
 }: FilterSelectProps) {
   return (
-    <Select value={value} onValueChange={onValueChange}>
+    <Select value={value || 'all'} onValueChange={(val) => onValueChange(val === 'all' ? '' : val)}>
       <SelectTrigger className={className}>
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value="">All {placeholder}</SelectItem>
+        {/* The "All" option uses value="all" because Radix Select forbids empty string values. */}
+        <SelectItem value="all">All {placeholder}</SelectItem>
         {options.map((option) => (
           <SelectItem key={option.value} value={option.value}>
             {option.label}
