@@ -65,7 +65,7 @@ export default function SidebarClient({ categories: initialCategories }: Sidebar
       description: 'Build your own drills and sessions',
       children: [
         { title: 'Create drill', href: '/create/drill' },
-        { title: 'Create training', href: '/create/training' },
+        { title: 'Create training', href: '/create/train' },
         { title: 'Create club training', href: '/create/club-training' },
       ],
     },
