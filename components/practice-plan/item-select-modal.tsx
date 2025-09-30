@@ -70,7 +70,7 @@ export function ItemSelectModal({
       position: 0,
       startTime: null,
       title: it.title,
-      thumbnail_url: it.thumbnail_url,
+      thumbnail_url: (it as any).thumbnail_url || (it as any).thumbnail,
     }))
     onAdd(items)
     onOpenChange(false)
