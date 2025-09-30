@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { ItemSelectModal } from "@/components/practice-plan/item-select-modal"
-import { Trash2 } from "lucide-react"
+import { Trash2, ArrowUp, ArrowDown } from "lucide-react"
 
 // Step components placeholders (to be implemented in their own files later)
 function MetadataStep({
@@ -20,6 +20,7 @@ function MetadataStep({
   onAddItemsClick,
   updateItem,
   removeItem,
+  moveItem,
 }: {
   data: Partial<PracticePlan>
   onChange: (d: Partial<PracticePlan>) => void
@@ -27,6 +28,7 @@ function MetadataStep({
   onAddItemsClick: () => void
   updateItem: (idx: number, partial: Partial<PracticePlanItem>) => void
   removeItem: (idx: number) => void
+  moveItem: (idx: number, dir: -1 | 1) => void
 }) {
   const handleTimeChange = (idx: number, value: string) => {
     if (!value) {
@@ -114,7 +116,15 @@ function MetadataStep({
                     className="w-24 h-8 text-xs mt-1"
                   />
                 </div>
-                <span className="text-xs text-gray-400 uppercase self-start mr-2">{it.itemType}</span>
+                <span className="text-xs text-gray-400 uppercase self-start mr-1">{it.itemType}</span>
+                <div className="flex flex-col self-start mr-1">
+                  <button onClick={() => moveItem(idx, -1)} disabled={idx === 0} className="text-gray-400 hover:text-gray-600 disabled:opacity-30" aria-label="Move up">
+                    <ArrowUp size={14} />
+                  </button>
+                  <button onClick={() => moveItem(idx, 1)} disabled={idx === items.length - 1} className="text-gray-400 hover:text-gray-600 disabled:opacity-30" aria-label="Move down">
+                    <ArrowDown size={14} />
+                  </button>
+                </div>
                 <button onClick={() => removeItem(idx)} aria-label="Remove" className="text-gray-400 hover:text-red-600 self-start">
                   <Trash2 size={16} />
                 </button>
@@ -148,6 +158,18 @@ export default function CreateTrainingPage() {
   const [planData, setPlanData] = useState<Partial<PracticePlan>>({ status: "draft" })
   const [items, setItems] = useState<PracticePlanItem[]>([])
   const [isModalOpen, setModalOpen] = useState(false)
+
+  const moveItem = (idx: number, direction: -1 | 1) => {
+    setItems((prev) => {
+      const newIdx = idx + direction
+      if (newIdx < 0 || newIdx >= prev.length) return prev
+      const copy = [...prev]
+      const temp = copy[idx]
+      copy[idx] = copy[newIdx]
+      copy[newIdx] = temp
+      return copy
+    })
+  }
 
   const removeItem = (idx: number) => {
     setItems((prev) => prev.filter((_, i) => i !== idx))
@@ -194,6 +216,7 @@ export default function CreateTrainingPage() {
             onAddItemsClick={() => setModalOpen(true)}
             updateItem={updateItem}
             removeItem={removeItem}
+            moveItem={moveItem}
           />
         </main>
         {/* Modal placeholder */}
