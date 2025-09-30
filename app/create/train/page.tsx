@@ -100,16 +100,18 @@ function MetadataStep({
         ) : (
           <ul className="space-y-2">
             {items.map((it, idx) => (
-              <li key={idx} className="flex items-center gap-3 p-2 border rounded">
+              <li key={idx} className="flex items-start gap-3 p-2 border rounded">
                 <img src={it.thumbnail_url ?? "https://placehold.co/80"} alt="thumb" className="w-16 h-16 object-cover rounded" />
-                <span className="text-sm flex-1">{it.title ?? `Item ${it.itemId}`}</span>
-                <span className="text-xs text-gray-400 uppercase mr-2">{it.itemType}</span>
-                <Input
-                  type="time"
-                  value={it.startTime ?? ""}
-                  onChange={(e) => handleTimeChange(idx, e.target.value)}
-                  className="w-24 h-8 text-xs"
-                />
+                <div className="flex flex-col flex-1">
+                  <span className="text-sm">{it.title ?? `Item ${it.itemId}`}</span>
+                  <Input
+                    type="time"
+                    value={it.startTime ?? ""}
+                    onChange={(e) => handleTimeChange(idx, e.target.value)}
+                    className="w-24 h-8 text-xs mt-1"
+                  />
+                </div>
+                <span className="text-xs text-gray-400 uppercase self-start">{it.itemType}</span>
               </li>
             ))}
           </ul>
