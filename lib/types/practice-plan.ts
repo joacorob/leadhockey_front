@@ -4,6 +4,8 @@ export interface PracticePlanItem {
   itemType: 'DRILL' | 'VIDEO_SESSION' | 'FAVOURITE'
   itemId: number
   position: number
+  /** Optional HH:mm starting time for the item */
+  startTime?: string | null
   // Populated from backend joins for convenience
   title?: string
   thumbnail_url?: string

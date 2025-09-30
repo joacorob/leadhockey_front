@@ -61,6 +61,7 @@ export function ItemSelectModal({
       itemType: tab === "drills" ? "DRILL" : tab === "videos" ? "VIDEO_SESSION" : "FAVOURITE",
       itemId: it.id,
       position: 0,
+      startTime: null,
       title: it.title,
       thumbnail_url: it.thumbnail_url,
     }))

@@ -17,12 +17,23 @@ function MetadataStep({
   onChange,
   items,
   onAddItemsClick,
+  updateItem,
 }: {
   data: Partial<PracticePlan>
   onChange: (d: Partial<PracticePlan>) => void
   items: PracticePlanItem[]
   onAddItemsClick: () => void
+  updateItem: (idx: number, partial: Partial<PracticePlanItem>) => void
 }) {
+  const handleTimeChange = (idx: number, value: string) => {
+    if (!value) {
+      updateItem(idx, { startTime: null })
+      return
+    }
+    const [h, m] = value.split(":")
+    if (isNaN(Number(h)) || isNaN(Number(m))) return
+    updateItem(idx, { startTime: value })
+  }
   return (
     <div className="space-y-8">
       {/* Training details */}
@@ -92,7 +103,13 @@ function MetadataStep({
               <li key={idx} className="flex items-center gap-3 p-2 border rounded">
                 <img src={it.thumbnail_url ?? "https://placehold.co/80"} alt="thumb" className="w-16 h-16 object-cover rounded" />
                 <span className="text-sm flex-1">{it.title ?? `Item ${it.itemId}`}</span>
-                <span className="text-xs text-gray-400 uppercase">{it.itemType}</span>
+                <span className="text-xs text-gray-400 uppercase mr-2">{it.itemType}</span>
+                <Input
+                  type="time"
+                  value={it.startTime ?? ""}
+                  onChange={(e) => handleTimeChange(idx, e.target.value)}
+                  className="w-24 h-8 text-xs"
+                />
               </li>
             ))}
           </ul>
@@ -123,6 +140,14 @@ export default function CreateTrainingPage() {
   const [planData, setPlanData] = useState<Partial<PracticePlan>>({ status: "draft" })
   const [items, setItems] = useState<PracticePlanItem[]>([])
   const [isModalOpen, setModalOpen] = useState(false)
+
+  const updateItem = (idx: number, partial: Partial<PracticePlanItem>) => {
+    setItems((prev) => {
+      const copy = [...prev]
+      copy[idx] = { ...copy[idx], ...partial }
+      return copy
+    })
+  }
 
   const handleSave = async () => {
     const payload = { ...planData, items }
@@ -155,6 +180,7 @@ export default function CreateTrainingPage() {
             onChange={(d) => setPlanData((p) => ({ ...p, ...d }))}
             items={items}
             onAddItemsClick={() => setModalOpen(true)}
+            updateItem={updateItem}
           />
         </main>
         {/* Modal placeholder */}
