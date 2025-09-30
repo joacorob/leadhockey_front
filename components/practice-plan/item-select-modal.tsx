@@ -45,6 +45,13 @@ export function ItemSelectModal({
     listRef.current?.scrollTo({ top: 0 })
   }, [tab])
 
+  // Clear selection when modal closes
+  useEffect(() => {
+    if (!open) {
+      setSelected({})
+    }
+  }, [open])
+
   const toggle = (item: BackendItem) => {
     setSelected((prev) => {
       const copy = { ...prev }

@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { ItemSelectModal } from "@/components/practice-plan/item-select-modal"
+import { Trash2 } from "lucide-react"
 
 // Step components placeholders (to be implemented in their own files later)
 function MetadataStep({
@@ -18,12 +19,14 @@ function MetadataStep({
   items,
   onAddItemsClick,
   updateItem,
+  removeItem,
 }: {
   data: Partial<PracticePlan>
   onChange: (d: Partial<PracticePlan>) => void
   items: PracticePlanItem[]
   onAddItemsClick: () => void
   updateItem: (idx: number, partial: Partial<PracticePlanItem>) => void
+  removeItem: (idx: number) => void
 }) {
   const handleTimeChange = (idx: number, value: string) => {
     if (!value) {
@@ -111,7 +114,10 @@ function MetadataStep({
                     className="w-24 h-8 text-xs mt-1"
                   />
                 </div>
-                <span className="text-xs text-gray-400 uppercase self-start">{it.itemType}</span>
+                <span className="text-xs text-gray-400 uppercase self-start mr-2">{it.itemType}</span>
+                <button onClick={() => removeItem(idx)} aria-label="Remove" className="text-gray-400 hover:text-red-600 self-start">
+                  <Trash2 size={16} />
+                </button>
               </li>
             ))}
           </ul>
@@ -142,6 +148,10 @@ export default function CreateTrainingPage() {
   const [planData, setPlanData] = useState<Partial<PracticePlan>>({ status: "draft" })
   const [items, setItems] = useState<PracticePlanItem[]>([])
   const [isModalOpen, setModalOpen] = useState(false)
+
+  const removeItem = (idx: number) => {
+    setItems((prev) => prev.filter((_, i) => i !== idx))
+  }
 
   const updateItem = (idx: number, partial: Partial<PracticePlanItem>) => {
     setItems((prev) => {
@@ -183,13 +193,20 @@ export default function CreateTrainingPage() {
             items={items}
             onAddItemsClick={() => setModalOpen(true)}
             updateItem={updateItem}
+            removeItem={removeItem}
           />
         </main>
         {/* Modal placeholder */}
         <ItemSelectModal
           open={isModalOpen}
           onOpenChange={setModalOpen}
-          onAdd={(newItems) => setItems((prev) => [...prev, ...newItems])}
+          onAdd={(newItems) =>
+            setItems((prev) => {
+              const existingKeys = new Set(prev.map((it) => `${it.itemType}-${it.itemId}`))
+              const deduped = newItems.filter((it) => !existingKeys.has(`${it.itemType}-${it.itemId}`))
+              return [...prev, ...deduped]
+            })
+          }
         />
       </div>
     </div>
