@@ -95,9 +95,9 @@ function MetadataStep({
       {/* Training stages */}
       <div className="bg-white rounded-lg p-6 shadow-sm">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-sm font-medium text-gray-700 uppercase tracking-wide">Training stages</h2>
+          <h2 className="text-sm font-medium text-gray-700 uppercase tracking-wide">Training videos</h2>
           <Button variant="link" size="sm" onClick={onAddItemsClick}>
-            + Add Stage Item
+            + Add Video
           </Button>
         </div>
         {items.length === 0 ? (
