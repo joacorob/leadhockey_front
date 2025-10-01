@@ -4,7 +4,8 @@ import { Sidebar } from "@/components/layout/sidebar"
 import { Header } from "@/components/layout/header"
 import { ClubNews } from "@/components/sections/club-news"
 import { VideoSection } from "@/components/sections/video-section"
-import { continueWatchingVideos, clubSessions } from "@/data/videos"
+import { ContinueWatchingSection } from "@/components/sections/continue-watching-section"
+import { clubSessions } from "@/data/videos"
 import type { Video } from "@/data/videos"
 
 export default function Dashboard() {
@@ -30,8 +31,8 @@ export default function Dashboard() {
             {/* Club News */}
             <ClubNews />
 
-            {/* Continue Watching */}
-            <VideoSection title="CONTINUE WATCHING" videos={continueWatchingVideos} onVideoClick={handleVideoClick} />
+            {/* Continue Watching - Now with real data */}
+            <ContinueWatchingSection />
 
             {/* My Club Sessions */}
             <VideoSection title="MY CLUB SESSIONS" videos={clubSessions} onVideoClick={handleVideoClick} />
