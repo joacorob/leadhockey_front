@@ -20,27 +20,24 @@ export function TrainingTimeline({ items, activeIndex, onItemClick }: TrainingTi
   }
 
   return (
-    <div className="bg-white rounded-lg p-4 shadow-sm">
-      <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-4">
-        Training Content
-      </h2>
-      <div className="space-y-3 relative">
-        {/* Vertical line connecting items */}
-        <div className="absolute left-[17px] top-0 bottom-0 w-0.5 bg-gray-200" />
-        
+    <div className="bg-white rounded-lg shadow-sm overflow-hidden border border-gray-200">
+      <h2 className="text-lg font-extrabold text-gray-800 px-6 py-4 border-b">TRAINING CONTENT</h2>
+      <div className="relative">
+        {/* Vertical line */}
+        <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-blue-700" />
+
         {items.map((item, index) => (
-          <div key={item.id || index} className="relative">
-            <TrainingItem
-              item={item}
-              index={index}
-              isActive={index === activeIndex}
-              expanded={expandedIndex === index}
-              onClick={() => {
-                setExpandedIndex(expandedIndex === index ? null : index)
-                onItemClick(index)
-              }}
-            />
-          </div>
+          <TrainingItem
+            key={item.id || index}
+            item={item}
+            index={index}
+            isActive={index === activeIndex}
+            expanded={expandedIndex === index}
+            onClick={() => {
+              setExpandedIndex(expandedIndex === index ? null : index)
+              onItemClick(index)
+            }}
+          />
         ))}
       </div>
     </div>
