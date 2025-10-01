@@ -9,6 +9,26 @@ async function getAccessToken() {
   return (session as any)?.accessToken as string | undefined
 }
 
+export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+  try {
+    const token = await getAccessToken()
+    const url = `${BASE_URL}/${params.id}`
+
+    const backendRes = await fetch(url, {
+      headers: {
+        accept: "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    })
+
+    const data = await backendRes.json()
+    return NextResponse.json(data, { status: backendRes.status })
+  } catch (e) {
+    console.error("practice-plans proxy GET error", e)
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+  }
+}
+
 export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const token = await getAccessToken()
