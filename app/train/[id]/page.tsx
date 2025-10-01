@@ -34,6 +34,10 @@ export default function TrainingSessionPage() {
           ...it,
           title: it.title || it.element?.title,
           thumbnail_url: it.thumbnail_url || it.element?.thumbnail,
+          videoUrl: it.element?.videoUrl,
+          videoProcessedUrl: it.element?.videoProcessedUrl,
+          subtitles: it.element?.subtitles ?? [],
+          pdfs: it.element?.pdfs ?? [],
         }))
 
         const planData = { ...rawPlan, items: mappedItems }

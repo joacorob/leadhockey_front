@@ -58,14 +58,16 @@ export function TrainingItem({ item, index, isActive, expanded, onClick }: Train
           </Badge>
         </div>
         {expanded && (
-          <img
-            src={thumbnail}
-            alt={item.title || "Item thumbnail"}
-            className="w-full h-20 object-cover rounded mb-2"
-            onError={(e) => {
-              (e.target as HTMLImageElement).src = "/placeholder-logo.png"
-            }}
-          />
+          <div className="w-full h-24 bg-gray-100 flex items-center justify-center rounded mb-2 overflow-hidden">
+            <img
+              src={thumbnail}
+              alt={item.title || "Item thumbnail"}
+              className="max-h-full object-contain"
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = "/placeholder-logo.png"
+              }}
+            />
+          </div>
         )}
         
         {item.startTime && (
