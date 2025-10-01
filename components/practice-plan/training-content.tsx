@@ -53,40 +53,62 @@ export function TrainingContent({ item, planTitle }: TrainingContentProps) {
 
       {/* Item details section */}
       <div className="p-6">
-        <div className="mb-4">
-          <div className="flex items-center gap-2 mb-2">
-            <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-              {item.itemType === "VIDEO_SESSION" ? "Video Session" : item.itemType === "DRILL" ? "Drill" : "Favourite"}
-            </span>
-            {item.startTime && (
-              <>
-                <span className="text-gray-300">•</span>
-                <span className="text-xs text-gray-600">
-                  <svg className="w-3 h-3 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  {item.startTime}
-                </span>
-              </>
-            )}
-          </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">
+        {/* Header & meta */}
+        <div className="mb-6">
+          <h1 className="text-3xl font-extrabold text-gray-900 mb-3 leading-snug">
             {item.title || `Training Item ${item.itemId}`}
           </h1>
+
+          <div className="flex items-center flex-wrap gap-6 text-sm text-gray-600">
+            {/* Duration */}
+            {(item as any).duration && (
+              <span className="flex items-center gap-1">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                {(item as any).duration}m
+              </span>
+            )}
+            {/* Level (hardcoded Advanced for now) */}
+            <span className="flex items-center gap-1">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v18m9-9H3" />
+              </svg>
+              Advanced
+            </span>
+            {/* Coach (placeholder) */}
+            <span className="flex items-center gap-1">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.121 17.804A4 4 0 018 16h8a4 4 0 012.879 1.804M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              Xavier Santolaria
+            </span>
+          </div>
         </div>
 
-        {/* PDFs section */}
+        {/* Description placeholder paragraphs */}
+        <div className="prose max-w-none text-gray-800 mb-8">
+          <p>{/* TODO dynamic description */}In this exercise, two teams compete on adjacent pitches, with one team having five attackers against three defenders...</p>
+          <p>The attacking team aims to keep possession and score by passing while the defenders aim to win the ball...</p>
+          <p>The difficulty level can be adjusted by modifying pitch size, the number of defenders...</p>
+        </div>
+
+        {/* Downloads */}
         {isVideo && (item as any).pdfs && (item as any).pdfs.length > 0 && (
-          <div className="mt-6">
-            <h3 className="text-sm font-semibold text-gray-700 mb-2">Downloads</h3>
-            <ul className="space-y-2">
-              {(item as any).pdfs.map((pdf: any) => (
-                <li key={pdf.id}>
+          <div className="mt-8">
+            <h3 className="text-lg font-extrabold text-gray-900 mb-4 uppercase tracking-wide">Download Instructions</h3>
+            <div className="flex flex-wrap gap-3">
+              {(item as any).pdfs.map((pdf: any) => {
+                // Try to infer language code (NL/EN/FR) from name
+                const match = pdf.name.match(/([A-Z]{2})[_.\s]/);
+                const label = match ? match[1] : "PDF";
+                return (
                   <a
+                    key={pdf.id}
                     href={pdf.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-blue-600 hover:underline text-sm flex items-center gap-2"
+                    className="inline-flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium px-6 py-2 rounded-md shadow transition"
                   >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
@@ -96,17 +118,13 @@ export function TrainingContent({ item, planTitle }: TrainingContentProps) {
                       stroke="currentColor"
                       className="w-4 h-4"
                     >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M12 15.75V3.75m0 0l3 3m-3-3l-3 3M9.75 12H3.75m0 0l3 3m-3-3l3-3m11.25 9.75h-6m0 0l3 3m-3-3l-3 3"
-                      />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 16v-8m0 0l-3 3m3-3l3 3m5 1a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                    {pdf.name}
+                    {label}
                   </a>
-                </li>
-              ))}
-            </ul>
+                );
+              })}
+            </div>
           </div>
         )}
       </div>
