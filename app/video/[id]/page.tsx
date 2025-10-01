@@ -111,7 +111,13 @@ function VideoViewContent() {
                   </div>
                 ) : (
                   <div className="bg-black rounded-lg overflow-hidden">
-                    <VideoPlayer videoUrl={`${mappedVideo.videoUrl}`} subtitles={subtitles} />
+                    <VideoPlayer 
+                      videoUrl={`${mappedVideo.videoUrl}`} 
+                      subtitles={subtitles}
+                      contentId={videoId}
+                      contentType="VIDEO_SESSION"
+                      enableProgressTracking={true}
+                    />
                   </div>
                 )
                 }

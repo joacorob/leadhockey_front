@@ -30,6 +30,9 @@ export function TrainingContent({ item, planTitle }: TrainingContentProps) {
             poster={thumbnail}
             fluid
             subtitles={subtitles}
+            contentId={String(item.itemId)}
+            contentType={item.itemType as "VIDEO_SESSION" | "DRILL"}
+            enableProgressTracking={true}
           />
         ) : (
           <>
