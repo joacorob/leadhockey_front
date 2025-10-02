@@ -5,6 +5,7 @@ import { Header } from "@/components/layout/header"
 import { ClubNews } from "@/components/sections/club-news"
 import { VideoSection } from "@/components/sections/video-section"
 import { ContinueWatchingSection } from "@/components/sections/continue-watching-section"
+import { LatestVideosSection } from "@/components/sections/latest-videos-section"
 import { clubSessions } from "@/data/videos"
 import type { Video } from "@/data/videos"
 
@@ -36,6 +37,9 @@ export default function Dashboard() {
 
             {/* My Club Sessions */}
             <VideoSection title="MY CLUB SESSIONS" videos={clubSessions} onVideoClick={handleVideoClick} />
+
+            {/* Latest Videos - Playlist ID=4 */}
+            <LatestVideosSection />
           </div>
         </main>
       </div>
