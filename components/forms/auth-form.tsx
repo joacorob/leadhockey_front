@@ -82,6 +82,7 @@ export function AuthForm({ type, onSubmit, isLoading = false }: AuthFormProps) {
         <Label htmlFor="password">Password</Label>
         <div className="relative">
           <Input
+            className="pr-10"
             id="password"
             type={showPassword ? "text" : "password"}
             placeholder="Enter your password"
@@ -106,6 +107,7 @@ export function AuthForm({ type, onSubmit, isLoading = false }: AuthFormProps) {
           <Label htmlFor="confirmPassword">Confirm Password</Label>
           <div className="relative">
             <Input
+              className="pr-10"
               id="confirmPassword"
               type={showConfirmPassword ? "text" : "password"}
               placeholder="Confirm your password"

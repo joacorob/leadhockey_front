@@ -7,6 +7,7 @@ import { signIn } from "next-auth/react"
 import { AuthLayout } from "@/components/layout/auth-layout"
 import { AuthForm } from "@/components/forms/auth-form"
 import { SocialAuth } from "@/components/forms/social-auth"
+import { toast } from '@/hooks/use-toast'
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
@@ -24,9 +25,12 @@ export default function LoginPage() {
 
     setIsLoading(false)
 
-    if (result?.error) {
-      // TODO: show toast or error message
-      console.error(result.error)
+    if (!result || result.ok === false) {
+      toast({
+        title: "Invalid credentials",
+        description: "Please check your email and password.",
+        variant: "destructive",
+      })
       return
     }
 
