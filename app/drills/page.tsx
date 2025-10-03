@@ -12,6 +12,7 @@ interface Drill {
   id:number;
   title:string;
   frames:any[]
+  thumbnail_url?:string; // URL or base64 string
 }
 
 export default function DrillsIndex(){
@@ -49,9 +50,18 @@ export default function DrillsIndex(){
             ) : (
               (Array.isArray(drills)?drills:[]).map(d=> (
                 <Link key={d.id} href={`/drills/${d.id}`} className="border rounded-lg p-3 hover:shadow transition">
-                  <DrillThumbnail element={d.frames?.[0]?.elements?.[0]} />
+                  {d.thumbnail_url ? (
+                    <img
+                      src={d.thumbnail_url.startsWith('http')?d.thumbnail_url:`data:image/png;base64,${d.thumbnail_url}`}
+                      alt={d.title}
+                      className="w-full h-44 object-cover rounded"
+                    />
+                  ) : (
+                    <div className="flex items-center justify-center w-full h-44 rounded" style={{backgroundColor:'#1e3a8a'}}>
+                      <img src="https://uploadthingy.s3.us-west-1.amazonaws.com/nzVf7cqEycpaU4k9WPUBYZ/LEAD_logo.png" alt="LEAD" className="w-24 h-24 object-contain" />
+                    </div>
+                  )}
                   <h2 className="mt-2 font-semibold truncate">{d.title}</h2>
-                  <p className="text-xs text-gray-500">Frames: {d.frames?.length||0}</p>
                 </Link>
               ))
             )}

@@ -22,6 +22,8 @@ export function useApi<T>(endpoint: string, params?: Record<string, any>) {
   }, [endpoint, JSON.stringify(params)])
 
   useEffect(() => {
+    // Clear data immediately when endpoint changes to avoid showing stale items
+    setData([] as any)
     fetchData()
   }, [fetchData])
 
@@ -62,6 +64,7 @@ export function usePaginatedApi<T>(
       if (Array.isArray(raw.data)) items = raw.data
       else if (Array.isArray(raw.items)) items = raw.items
       else if (Array.isArray(raw.data?.items)) items = raw.data.items
+      else if (Array.isArray(raw.data?.data?.items)) items = raw.data.data.items
 
       setData(items)
 
