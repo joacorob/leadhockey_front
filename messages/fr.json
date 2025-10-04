@@ -1,0 +1,55 @@
+{
+  "metadata": {
+    "title": "LEAD Hockey - Plateforme d'entraînement",
+    "description": "Plateforme professionnelle d'entraînement de hockey avec des sessions vidéo et des exercices"
+  },
+  "auth": {
+    "layout": {
+      "back": "Retour à l'accueil"
+    },
+    "common": {
+      "emailLabel": "E-mail",
+      "emailPlaceholder": "jean@example.com",
+      "passwordLabel": "Mot de passe",
+      "passwordPlaceholder": "Entrez votre mot de passe",
+      "confirmPasswordLabel": "Confirmez le mot de passe",
+      "confirmPasswordPlaceholder": "Confirmez votre mot de passe",
+      "rememberMe": "Se souvenir de moi",
+      "submitLogin": "Se connecter",
+      "submitRegister": "Créer un compte",
+      "termsAgreementPrefix": "J'accepte les",
+      "termsAgreementAnd": "et la",
+      "terms": "Conditions d'utilisation",
+      "privacy": "Politique de confidentialité",
+      "firstNameLabel": "Prénom",
+      "firstNamePlaceholder": "Jean",
+      "lastNameLabel": "Nom",
+      "lastNamePlaceholder": "Dupont"
+    },
+    "login": {
+      "title": "Bon retour",
+      "subtitle": "Connectez-vous à votre compte LEAD Hockey",
+      "forgotPassword": "Mot de passe oublié ?",
+      "noAccount": "Vous n'avez pas de compte ?",
+      "cta": "Inscrivez-vous",
+      "socialIntro": "Ou connectez-vous avec"
+    },
+    "register": {
+      "title": "Créer un compte",
+      "subtitle": "Rejoignez LEAD Hockey et commencez votre parcours d'entraînement",
+      "haveAccount": "Vous avez déjà un compte ?",
+      "cta": "Connectez-vous",
+      "passwordMismatch": "Les mots de passe ne correspondent pas !",
+      "acceptTerms": "Veuillez accepter les Conditions d'utilisation et la Politique de confidentialité",
+      "socialIntro": "Ou inscrivez-vous avec"
+    }
+  },
+  "languageSwitcher": {
+    "label": "Langue",
+    "options": {
+      "en": "Anglais",
+      "fr": "Français",
+      "nl": "Néerlandais"
+    }
+  }
+}

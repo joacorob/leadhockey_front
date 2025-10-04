@@ -7,10 +7,12 @@ import { signIn } from "next-auth/react"
 import { AuthLayout } from "@/components/layout/auth-layout"
 import { AuthForm } from "@/components/forms/auth-form"
 import { SocialAuth } from "@/components/forms/social-auth"
+import { useTranslations } from "@/providers/i18n-provider"
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
+  const t = useTranslations("auth.login")
 
   const handleLogin = async (formData: any) => {
     setIsLoading(true)
@@ -34,7 +36,7 @@ export default function LoginPage() {
   }
 
   return (
-    <AuthLayout title="Welcome Back" subtitle="Sign in to your LEAD Hockey account" showBackButton={false}>
+    <AuthLayout title={t("title")} subtitle={t("subtitle")} showBackButton={false}>
       <div className="space-y-6">
         <AuthForm type="login" onSubmit={handleLogin} isLoading={isLoading} />
 
@@ -42,13 +44,13 @@ export default function LoginPage() {
 
         <div className="text-center space-y-2">
           <Link href="/forgot-password" className="text-sm text-blue-600 hover:underline">
-            Forgot your password?
+            {t("forgotPassword")}
           </Link>
 
           <p className="text-sm text-gray-600">
-            Don't have an account?{" "}
+            {t("noAccount")} {" "}
             <Link href="/register" className="text-blue-600 hover:underline font-medium">
-              Sign up
+              {t("cta")}
             </Link>
           </p>
         </div>

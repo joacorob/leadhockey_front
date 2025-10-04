@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Eye, EyeOff, Loader2 } from "lucide-react"
+import { useTranslations } from "@/providers/i18n-provider"
 
 interface AuthFormProps {
   type: "login" | "register"
@@ -16,6 +17,7 @@ interface AuthFormProps {
 }
 
 export function AuthForm({ type, onSubmit, isLoading = false }: AuthFormProps) {
+  const tCommon = useTranslations("auth.common")
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -42,22 +44,22 @@ export function AuthForm({ type, onSubmit, isLoading = false }: AuthFormProps) {
       {type === "register" && (
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="firstName">First Name</Label>
+            <Label htmlFor="firstName">{tCommon("firstNameLabel")}</Label>
             <Input
               id="firstName"
               type="text"
-              placeholder="John"
+              placeholder={tCommon("firstNamePlaceholder")}
               value={formData.firstName}
               onChange={(e) => handleInputChange("firstName", e.target.value)}
               required
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="lastName">Last Name</Label>
+            <Label htmlFor="lastName">{tCommon("lastNameLabel")}</Label>
             <Input
               id="lastName"
               type="text"
-              placeholder="Doe"
+              placeholder={tCommon("lastNamePlaceholder")}
               value={formData.lastName}
               onChange={(e) => handleInputChange("lastName", e.target.value)}
               required
@@ -67,11 +69,11 @@ export function AuthForm({ type, onSubmit, isLoading = false }: AuthFormProps) {
       )}
 
       <div className="space-y-2">
-        <Label htmlFor="email">Email</Label>
+        <Label htmlFor="email">{tCommon("emailLabel")}</Label>
         <Input
           id="email"
           type="email"
-          placeholder="john@example.com"
+          placeholder={tCommon("emailPlaceholder")}
           value={formData.email}
           onChange={(e) => handleInputChange("email", e.target.value)}
           required
@@ -79,12 +81,12 @@ export function AuthForm({ type, onSubmit, isLoading = false }: AuthFormProps) {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="password">Password</Label>
+        <Label htmlFor="password">{tCommon("passwordLabel")}</Label>
         <div className="relative">
           <Input
             id="password"
             type={showPassword ? "text" : "password"}
-            placeholder="Enter your password"
+            placeholder={tCommon("passwordPlaceholder")}
             value={formData.password}
             onChange={(e) => handleInputChange("password", e.target.value)}
             required
@@ -103,12 +105,12 @@ export function AuthForm({ type, onSubmit, isLoading = false }: AuthFormProps) {
 
       {type === "register" && (
         <div className="space-y-2">
-          <Label htmlFor="confirmPassword">Confirm Password</Label>
+          <Label htmlFor="confirmPassword">{tCommon("confirmPasswordLabel")}</Label>
           <div className="relative">
             <Input
               id="confirmPassword"
               type={showConfirmPassword ? "text" : "password"}
-              placeholder="Confirm your password"
+              placeholder={tCommon("confirmPasswordPlaceholder")}
               value={formData.confirmPassword}
               onChange={(e) => handleInputChange("confirmPassword", e.target.value)}
               required
@@ -134,7 +136,7 @@ export function AuthForm({ type, onSubmit, isLoading = false }: AuthFormProps) {
             onCheckedChange={(checked) => handleInputChange("rememberMe", checked as boolean)}
           />
           <Label htmlFor="rememberMe" className="text-sm font-normal">
-            Remember me
+            {tCommon("rememberMe")}
           </Label>
         </div>
       )}
@@ -148,13 +150,13 @@ export function AuthForm({ type, onSubmit, isLoading = false }: AuthFormProps) {
             required
           />
           <Label htmlFor="agreeToTerms" className="text-sm font-normal">
-            I agree to the{" "}
+            {tCommon("termsAgreementPrefix")} {" "}
             <a href="/terms" className="text-blue-600 hover:underline">
-              Terms of Service
+              {tCommon("terms")}
             </a>{" "}
-            and{" "}
+            {tCommon("termsAgreementAnd")}{" "}
             <a href="/privacy" className="text-blue-600 hover:underline">
-              Privacy Policy
+              {tCommon("privacy")}
             </a>
           </Label>
         </div>
@@ -162,7 +164,7 @@ export function AuthForm({ type, onSubmit, isLoading = false }: AuthFormProps) {
 
       <Button type="submit" className="w-full" disabled={isLoading}>
         {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-        {type === "login" ? "Sign In" : "Create Account"}
+        {type === "login" ? tCommon("submitLogin") : tCommon("submitRegister")}
       </Button>
     </form>
   )

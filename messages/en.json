@@ -1,0 +1,55 @@
+{
+  "metadata": {
+    "title": "LEAD Hockey - Training Platform",
+    "description": "Professional hockey training platform with video sessions and drills"
+  },
+  "auth": {
+    "layout": {
+      "back": "Back to Home"
+    },
+    "common": {
+      "emailLabel": "Email",
+      "emailPlaceholder": "john@example.com",
+      "passwordLabel": "Password",
+      "passwordPlaceholder": "Enter your password",
+      "confirmPasswordLabel": "Confirm Password",
+      "confirmPasswordPlaceholder": "Confirm your password",
+      "rememberMe": "Remember me",
+      "submitLogin": "Sign In",
+      "submitRegister": "Create Account",
+      "termsAgreementPrefix": "I agree to the",
+      "termsAgreementAnd": "and",
+      "terms": "Terms of Service",
+      "privacy": "Privacy Policy",
+      "firstNameLabel": "First Name",
+      "firstNamePlaceholder": "John",
+      "lastNameLabel": "Last Name",
+      "lastNamePlaceholder": "Doe"
+    },
+    "login": {
+      "title": "Welcome Back",
+      "subtitle": "Sign in to your LEAD Hockey account",
+      "forgotPassword": "Forgot your password?",
+      "noAccount": "Don't have an account?",
+      "cta": "Sign up",
+      "socialIntro": "Or sign in with"
+    },
+    "register": {
+      "title": "Create Account",
+      "subtitle": "Join LEAD Hockey and start your training journey",
+      "haveAccount": "Already have an account?",
+      "cta": "Sign in",
+      "passwordMismatch": "Passwords do not match!",
+      "acceptTerms": "Please agree to the Terms of Service and Privacy Policy",
+      "socialIntro": "Or sign up with"
+    }
+  },
+  "languageSwitcher": {
+    "label": "Language",
+    "options": {
+      "en": "English",
+      "fr": "French",
+      "nl": "Dutch"
+    }
+  }
+}
