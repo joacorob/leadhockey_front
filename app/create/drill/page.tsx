@@ -58,6 +58,7 @@ export default function BuildDrillPage() {
   const [selectedElements, setSelectedElements] = useState<string[]>([])
   const [playerCounters, setPlayerCounters] = useState<{ [frameIndex: number]: { [key: string]: number } }>({})
   const [gifUrl, setGifUrl] = useState<string | null>(null)
+  const [cachedGifBase64, setCachedGifBase64] = useState<string | null>(null)
   const [isGifModalOpen, setGifModalOpen] = useState(false)
   const [isGeneratingGif, setGeneratingGif] = useState(false)
   const [isSavingDrill, setSavingDrill] = useState(false)
@@ -67,6 +68,12 @@ export default function BuildDrillPage() {
   const [gifLoaded, setGifLoaded] = useState(false)
 
   const handleViewGif = () => setGifModalOpen(true)
+
+  // Helper to invalidate GIF cache when frames change
+  const invalidateGifCache = () => {
+    setGifUrl(null)
+    setCachedGifBase64(null)
+  }
 
   const [drillData, setDrillData] = useState({
     title: "New Training Session",
@@ -112,22 +119,29 @@ export default function BuildDrillPage() {
       // Capture thumbnail (PNG)
       const thumbnailBase64 = await captureThumbnail()
       
-      // Generate GIF animation at current speed
+      // Generate or reuse GIF animation
       let animationGifBase64: string | undefined
-      try {
-        animationGifBase64 = (await exportGif({ 
-          delay: delayMap[speed], 
-          width: 900, 
-          returnBase64: true 
-        })) as string
-      } catch (gifError: any) {
-        toast({ 
-          title: "Error generating animation", 
-          description: gifError.message || "Failed to create drill animation",
-          variant: "destructive" 
-        })
-        setSavingDrill(false)
-        return // Abort save per requirement
+      
+      if (cachedGifBase64) {
+        // Reuse existing GIF
+        animationGifBase64 = cachedGifBase64
+      } else {
+        // Generate new GIF at current speed
+        try {
+          animationGifBase64 = (await exportGif({ 
+            delay: delayMap[speed], 
+            width: 900, 
+            returnBase64: true 
+          })) as string
+        } catch (gifError: any) {
+          toast({ 
+            title: "Error generating animation", 
+            description: gifError.message || "Failed to create drill animation",
+            variant: "destructive" 
+          })
+          setSavingDrill(false)
+          return // Abort save per requirement
+        }
       }
 
       const payload = {
@@ -158,11 +172,11 @@ export default function BuildDrillPage() {
       const data = await res.json()
 
       if (res.ok) {
-        // Clean up preview URL if exists
+        // Clean up preview URL and cache after successful save
         if (gifUrl) {
           URL.revokeObjectURL(gifUrl)
-          setGifUrl(null)
         }
+        invalidateGifCache()
         toast({ title: "Drill saved" })
         router.push(`/drills/${data.id || data?.data?.id}`)
       } else {
@@ -228,6 +242,7 @@ export default function BuildDrillPage() {
     setFrames((prevFrames) =>
       prevFrames.map((frame, index) => (index === idx ? { ...frame, elements: [...frame.elements, newElement] } : frame)),
     )
+    invalidateGifCache()
   }
 
   const updateElement = (id: string, updates: Partial<DrillElement>) => {
@@ -241,6 +256,7 @@ export default function BuildDrillPage() {
           : frame,
       ),
     )
+    invalidateGifCache()
   }
 
   const removeElement = (id: string) => {
@@ -267,6 +283,7 @@ export default function BuildDrillPage() {
         index >= currentFrameIndex ? { ...frame, elements: frame.elements.filter((el) => el.id !== id) } : frame,
       ),
     )
+    invalidateGifCache()
   }
 
   const removeSelectedElements = () => {
@@ -298,6 +315,7 @@ export default function BuildDrillPage() {
       ),
     )
     setSelectedElements([])
+    invalidateGifCache()
   }
 
   const moveSelectedElements = (deltaX: number, deltaY: number) => {
@@ -327,6 +345,7 @@ export default function BuildDrillPage() {
       prevFrames.map((frame, index) => (index === currentFrameIndex ? { ...frame, elements: [] } : frame)),
     )
     setSelectedElements([])
+    invalidateGifCache()
   }
 
   const addFrame = () => {
@@ -338,6 +357,7 @@ export default function BuildDrillPage() {
     setFrames([...frames, newFrame])
     setCurrentFrameIndex(frames.length)
     setSelectedElements([])
+    invalidateGifCache()
   }
 
   const duplicateFrame = () => {
@@ -351,6 +371,7 @@ export default function BuildDrillPage() {
     setFrames([...frames, duplicatedFrame])
     setCurrentFrameIndex(frames.length)
     setSelectedElements([])
+    invalidateGifCache()
   }
 
   const removeFrame = (frameIndex: number) => {
@@ -365,6 +386,7 @@ export default function BuildDrillPage() {
       setCurrentFrameIndex(currentFrameIndex - 1)
     }
     setSelectedElements([])
+    invalidateGifCache()
   }
 
   const updateFrameName = (frameIndex: number, name: string) => {
@@ -473,25 +495,29 @@ export default function BuildDrillPage() {
 
         gif.on("finished", async (blob: Blob) => {
           clearTimeout(timeout)
-          if (returnBase64) {
-            // Convert Blob to base64 for backend
-            const reader = new FileReader()
-            reader.onloadend = () => {
-              const base64 = (reader.result as string).replace(/^data:image\/gif;base64,/, "")
+          
+          // Always convert to base64 for caching
+          const reader = new FileReader()
+          reader.onloadend = () => {
+            const base64 = (reader.result as string).replace(/^data:image\/gif;base64,/, "")
+            setCachedGifBase64(base64)
+            
+            if (returnBase64) {
+              // Return base64 for backend
               setGeneratingGif(false)
               resolve(base64)
-            }
-            reader.onerror = () => {
+            } else {
+              // For preview/download, also create Blob URL
+              setGifUrl(URL.createObjectURL(blob))
               setGeneratingGif(false)
-              reject(new Error("Failed to convert GIF to base64"))
+              resolve()
             }
-            reader.readAsDataURL(blob)
-          } else {
-            // For preview/download
-            setGifUrl(URL.createObjectURL(blob))
-            setGeneratingGif(false)
-            resolve()
           }
+          reader.onerror = () => {
+            setGeneratingGif(false)
+            reject(new Error("Failed to convert GIF to base64"))
+          }
+          reader.readAsDataURL(blob)
         })
 
         gif.render()
@@ -535,8 +561,7 @@ export default function BuildDrillPage() {
 
   const handleSpeedChange=(s:'slow'|'regular'|'fast')=>{
     setSpeed(s)
-    // invalidate existing gif so it regenerates on next preview
-    setGifUrl(null)
+    invalidateGifCache()
   }
 
   const getSelectedElement = () => {
@@ -584,7 +609,7 @@ export default function BuildDrillPage() {
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
                           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/>
                         </svg>
-                        {isGeneratingGif ? "Generating animation…" : "Saving drill…"}
+                        {isGeneratingGif && !cachedGifBase64 ? "Generating animation…" : "Saving drill…"}
                       </span>
                     ) : (
                       <>
