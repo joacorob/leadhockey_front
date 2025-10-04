@@ -108,12 +108,33 @@ export default function BuildDrillPage() {
 
   const handleSaveDrill = async () => {
     setSavingDrill(true)
-    const thumbnailBase64 = await captureThumbnail()
     try {
+      // Capture thumbnail (PNG)
+      const thumbnailBase64 = await captureThumbnail()
+      
+      // Generate GIF animation at current speed
+      let animationGifBase64: string | undefined
+      try {
+        animationGifBase64 = (await exportGif({ 
+          delay: delayMap[speed], 
+          width: 900, 
+          returnBase64: true 
+        })) as string
+      } catch (gifError: any) {
+        toast({ 
+          title: "Error generating animation", 
+          description: gifError.message || "Failed to create drill animation",
+          variant: "destructive" 
+        })
+        setSavingDrill(false)
+        return // Abort save per requirement
+      }
+
       const payload = {
         title: drillData.title,
         description: drillData.description || undefined,
         thumbnail: thumbnailBase64, // backend will decode PNG
+        animation_gif: animationGifBase64, // backend will decode GIF
         frames: frames.map((f, idx) => ({
           order_index: idx,
           elements: f.elements.map((el) => ({
@@ -137,6 +158,11 @@ export default function BuildDrillPage() {
       const data = await res.json()
 
       if (res.ok) {
+        // Clean up preview URL if exists
+        if (gifUrl) {
+          URL.revokeObjectURL(gifUrl)
+          setGifUrl(null)
+        }
         toast({ title: "Drill saved" })
         router.push(`/drills/${data.id || data?.data?.id}`)
       } else {
@@ -367,81 +393,113 @@ export default function BuildDrillPage() {
   }
 
   // === GIF EXPORT ===
-  const exportGif = async ({ delay, width }: { delay: number; width: number }) => {
-    // kept for backwards compatibility – called internally via handlePreviewVideo
+  const exportGif = async ({ delay, width, returnBase64 = false }: { delay: number; width: number; returnBase64?: boolean }): Promise<string | void> => {
     setGeneratingGif(true)
-    // Uso la versión browser que embebe el worker, así evitamos problemas de CORS
-    // @ts-ignore – librería no tiene tipos
-    const { default: GIF } = await import("gif.js")
-    const steps = 10 // interpolation steps between keyframes
-    const aspect = 600 / 900
-    const gifWidth = width
-    const gifHeight = Math.round(width * aspect)
+    try {
+      // @ts-ignore – librería no tiene tipos
+      const { default: GIF } = await import("gif.js")
+      const steps = 10 // interpolation steps between keyframes
+      const aspect = 600 / 900
+      const gifWidth = width
+      const gifHeight = Math.round(width * aspect)
 
-    const renderSnapshot = async () => {
-      await new Promise((res) => setTimeout(res, 30))
-      return stageRef.current.toDataURL({ pixelRatio: 2 })
-    }
+      const renderSnapshot = async () => {
+        await new Promise((res) => setTimeout(res, 30))
+        return stageRef.current.toDataURL({ pixelRatio: 2 })
+      }
 
-    const originalFrames = JSON.parse(JSON.stringify(frames)) as DrillFrame[]
+      const originalFrames = JSON.parse(JSON.stringify(frames)) as DrillFrame[]
+      const originalIndex = currentFrameRef.current
 
-    const framesData: { src: string; d: number }[] = []
+      const framesData: { src: string; d: number }[] = []
 
-    for (let i = 0; i < frames.length; i++) {
-      setCurrentFrameIndex(i)
-      framesData.push({ src: await renderSnapshot(), d: delay })
+      for (let i = 0; i < frames.length; i++) {
+        setCurrentFrameIndex(i)
+        framesData.push({ src: await renderSnapshot(), d: delay })
 
-      const next = frames[i + 1]
-      if (!next) break
+        const next = frames[i + 1]
+        if (!next) break
 
-      const startMap: Record<string, DrillElement> = {}
-      frames[i].elements.forEach((el) => (startMap[el.id] = el))
-      const endMap: Record<string, DrillElement> = {}
-      next.elements.forEach((el) => (endMap[el.id] = el))
+        const startMap: Record<string, DrillElement> = {}
+        frames[i].elements.forEach((el) => (startMap[el.id] = el))
+        const endMap: Record<string, DrillElement> = {}
+        next.elements.forEach((el) => (endMap[el.id] = el))
 
-      for (let s = 1; s < steps; s++) {
-        const t = s / steps
-        const interpElements: DrillElement[] = frames[i].elements.map((el) => {
-          const end = endMap[el.id] || el
-          return {
-            ...el,
-            x: el.x + (end.x - el.x) * t,
-            y: el.y + (end.y - el.y) * t,
-            rotation: (el.rotation || 0) + ((end.rotation || 0) - (el.rotation || 0)) * t,
-            size: (el.size || 1) + ((end.size || 1) - (el.size || 1)) * t,
+        for (let s = 1; s < steps; s++) {
+          const t = s / steps
+          const interpElements: DrillElement[] = frames[i].elements.map((el) => {
+            const end = endMap[el.id] || el
+            return {
+              ...el,
+              x: el.x + (end.x - el.x) * t,
+              y: el.y + (end.y - el.y) * t,
+              rotation: (el.rotation || 0) + ((end.rotation || 0) - (el.rotation || 0)) * t,
+              size: (el.size || 1) + ((end.size || 1) - (el.size || 1)) * t,
+            }
+          })
+
+          setFrames((prev) => prev.map((f, idx) => (idx === i ? { ...f, elements: interpElements } : f)))
+          framesData.push({ src: await renderSnapshot(), d: delay / steps })
+        }
+      }
+
+      // Restore original state
+      setFrames(originalFrames)
+      setCurrentFrameIndex(originalIndex)
+
+      const gif = new GIF({
+        workerScript: "/gif.worker.js",
+        repeat: -1, // no loop
+      })
+
+      const loadImage = (src: string): Promise<HTMLImageElement> =>
+        new Promise((resolve) => {
+          const img = new Image()
+          img.onload = () => resolve(img)
+          img.src = src
+        })
+
+      for (const { src, d } of framesData) {
+        const imgEl = await loadImage(src)
+        gif.addFrame(imgEl, { delay: d, copy: true })
+      }
+
+      return new Promise((resolve, reject) => {
+        // Safety timeout in case GIF generation hangs
+        const timeout = setTimeout(() => {
+          setGeneratingGif(false)
+          reject(new Error("GIF generation timed out"))
+        }, 60000) // 60 seconds
+
+        gif.on("finished", async (blob: Blob) => {
+          clearTimeout(timeout)
+          if (returnBase64) {
+            // Convert Blob to base64 for backend
+            const reader = new FileReader()
+            reader.onloadend = () => {
+              const base64 = (reader.result as string).replace(/^data:image\/gif;base64,/, "")
+              setGeneratingGif(false)
+              resolve(base64)
+            }
+            reader.onerror = () => {
+              setGeneratingGif(false)
+              reject(new Error("Failed to convert GIF to base64"))
+            }
+            reader.readAsDataURL(blob)
+          } else {
+            // For preview/download
+            setGifUrl(URL.createObjectURL(blob))
+            setGeneratingGif(false)
+            resolve()
           }
         })
 
-        setFrames((prev) => prev.map((f, idx) => (idx === i ? { ...f, elements: interpElements } : f)))
-        framesData.push({ src: await renderSnapshot(), d: delay / steps })
-      }
-    }
-
-    setFrames(originalFrames)
-
-    const gif = new GIF({
-      workerScript: "/gif.worker.js",
-      repeat: -1, // no loop
-    })
-
-    const loadImage = (src: string): Promise<HTMLImageElement> =>
-      new Promise((resolve) => {
-        const img = new Image()
-        img.onload = () => resolve(img)
-        img.src = src
+        gif.render()
       })
-
-    for (const { src, d } of framesData) {
-      const imgEl = await loadImage(src)
-      gif.addFrame(imgEl, { delay: d, copy: true })
-    }
-
-    gif.on("finished", (blob: Blob) => {
-      setGifUrl(URL.createObjectURL(blob))
+    } catch (err) {
       setGeneratingGif(false)
-    })
-
-    gif.render()
+      throw err
+    }
   }
 
   const handleDownloadVideo=async()=>{
@@ -518,10 +576,16 @@ export default function BuildDrillPage() {
                     variant="default"
                     size="sm"
                     className="bg-green-600 hover:bg-green-700"
-                    disabled={isSavingDrill}
+                    disabled={isSavingDrill || isGeneratingGif}
                   >
-                    {isSavingDrill ? (
-                      "Saving Drill…"
+                    {isSavingDrill || isGeneratingGif ? (
+                      <span className="flex items-center gap-2">
+                        <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/>
+                        </svg>
+                        {isGeneratingGif ? "Generating animation…" : "Saving drill…"}
+                      </span>
                     ) : (
                       <>
                         <Save className="w-4 h-4 mr-1" />

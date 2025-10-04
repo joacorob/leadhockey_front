@@ -107,11 +107,17 @@ Authorization: Bearer <jwt>
   "title": "Give & Go Passing",
   "description": "Basic give-and-go pattern",
   "clubId": 3,
+  "thumbnail": "base64-encoded-png-without-header",  // Optional: PNG thumbnail of first frame
+  "animation_gif": "base64-encoded-gif-without-header",  // Optional: Animated GIF of all frames
   "frames": [Frame, …]
 }
 ```
 
 **Response 201** – returns the full newly-created `Drill`.
+
+**Notes:**
+- `thumbnail` and `animation_gif` should be raw base64 strings without the `data:image/...;base64,` prefix
+- Frontend automatically generates both when saving a drill
 
 ---
 
