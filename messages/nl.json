@@ -1,0 +1,55 @@
+{
+  "metadata": {
+    "title": "LEAD Hockey - Trainingsplatform",
+    "description": "Professioneel hockeytrainingsplatform met videosessies en oefeningen"
+  },
+  "auth": {
+    "layout": {
+      "back": "Terug naar start"
+    },
+    "common": {
+      "emailLabel": "E-mail",
+      "emailPlaceholder": "jan@example.com",
+      "passwordLabel": "Wachtwoord",
+      "passwordPlaceholder": "Voer je wachtwoord in",
+      "confirmPasswordLabel": "Bevestig wachtwoord",
+      "confirmPasswordPlaceholder": "Bevestig je wachtwoord",
+      "rememberMe": "Onthoud mij",
+      "submitLogin": "Inloggen",
+      "submitRegister": "Account aanmaken",
+      "termsAgreementPrefix": "Ik ga akkoord met de",
+      "termsAgreementAnd": "en het",
+      "terms": "Gebruiksvoorwaarden",
+      "privacy": "Privacybeleid",
+      "firstNameLabel": "Voornaam",
+      "firstNamePlaceholder": "Jan",
+      "lastNameLabel": "Achternaam",
+      "lastNamePlaceholder": "Jansen"
+    },
+    "login": {
+      "title": "Welkom terug",
+      "subtitle": "Log in op je LEAD Hockey-account",
+      "forgotPassword": "Wachtwoord vergeten?",
+      "noAccount": "Nog geen account?",
+      "cta": "Meld je aan",
+      "socialIntro": "Of log in met"
+    },
+    "register": {
+      "title": "Account aanmaken",
+      "subtitle": "Word lid van LEAD Hockey en begin aan je trainingsreis",
+      "haveAccount": "Heb je al een account?",
+      "cta": "Log in",
+      "passwordMismatch": "Wachtwoorden komen niet overeen!",
+      "acceptTerms": "Ga akkoord met de Gebruiksvoorwaarden en het Privacybeleid",
+      "socialIntro": "Of meld je aan met"
+    }
+  },
+  "languageSwitcher": {
+    "label": "Taal",
+    "options": {
+      "en": "Engels",
+      "fr": "Frans",
+      "nl": "Nederlands"
+    }
+  }
+}

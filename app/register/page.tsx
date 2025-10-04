@@ -6,23 +6,25 @@ import { useRouter } from "next/navigation"
 import { AuthLayout } from "@/components/layout/auth-layout"
 import { AuthForm } from "@/components/forms/auth-form"
 import { SocialAuth } from "@/components/forms/social-auth"
+import { useTranslations } from "@/providers/i18n-provider"
 
 export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
+  const t = useTranslations("auth.register")
 
   const handleRegister = async (formData: any) => {
     setIsLoading(true)
 
     // Basic validation
     if (formData.password !== formData.confirmPassword) {
-      alert("Passwords do not match!")
+      alert(t("passwordMismatch"))
       setIsLoading(false)
       return
     }
 
     if (!formData.agreeToTerms) {
-      alert("Please agree to the Terms of Service and Privacy Policy")
+      alert(t("acceptTerms"))
       setIsLoading(false)
       return
     }
@@ -35,7 +37,7 @@ export default function RegisterPage() {
   }
 
   return (
-    <AuthLayout title="Create Account" subtitle="Join LEAD Hockey and start your training journey" showBackButton={false}>
+    <AuthLayout title={t("title")} subtitle={t("subtitle")} showBackButton={false}>
       <div className="space-y-6">
         <AuthForm type="register" onSubmit={handleRegister} isLoading={isLoading} />
 
@@ -43,9 +45,9 @@ export default function RegisterPage() {
 
         <div className="text-center">
           <p className="text-sm text-gray-600">
-            Already have an account?{" "}
+            {t("haveAccount")} {" "}
             <Link href="/login" className="text-blue-600 hover:underline font-medium">
-              Sign in
+              {t("cta")}
             </Link>
           </p>
         </div>

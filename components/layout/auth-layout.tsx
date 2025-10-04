@@ -6,6 +6,8 @@ import Image from "next/image"
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { LanguageSwitcher } from "@/components/i18n/language-switcher"
+import { useTranslations } from "@/providers/i18n-provider"
 
 interface AuthLayoutProps {
   children: React.ReactNode
@@ -15,14 +17,19 @@ interface AuthLayoutProps {
 }
 
 export function AuthLayout({ children, title, subtitle, showBackButton = true }: AuthLayoutProps) {
+  const t = useTranslations("auth.layout")
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-8 space-y-4">
+        <div className="flex items-center justify-end">
+          <LanguageSwitcher />
+        </div>
         {showBackButton && (
           <Button variant="ghost" asChild className="mb-8">
             <Link href="/login" className="flex items-center">
               <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Home
+              {t("back")}
             </Link>
           </Button>
         )}

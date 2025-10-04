@@ -1,27 +1,43 @@
 import * as Sentry from '@sentry/nextjs';
 import type { Metadata } from 'next'
+import { cookies } from 'next/headers'
 import { Inter } from 'next/font/google'
 import './globals.css'
-import { MobileNav } from '@/components/layout/mobile-nav'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import SessionProvider from '@/providers/provider'
+import { I18nProvider } from '@/providers/i18n-provider'
+import { defaultLocale, locales, type Locale } from '@/lib/i18n/config'
+import { getDictionary } from '@/lib/i18n/dictionary'
+import { getTranslator } from '@/lib/i18n/translator'
 
-const inter = Inter({ 
+const inter = Inter({
   subsets: ['latin'],
   variable: '--font-inter',
   display: 'swap',
 })
 
-export function generateMetadata(): Metadata {
+function resolveLocale(candidate?: string | null): Locale {
+  if (candidate && locales.includes(candidate as Locale)) {
+    return candidate as Locale
+  }
+
+  return defaultLocale
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  const cookieStore = cookies()
+  const locale = resolveLocale(cookieStore.get('NEXT_LOCALE')?.value)
+  const t = await getTranslator(locale, 'metadata')
+
   return {
-    title: 'LEAD Hockey - Training Platform',
-    description: 'Professional hockey training platform with video sessions and drills',
+    title: t('title'),
+    description: t('description'),
     generator: 'v0.app',
     other: {
       ...Sentry.getTraceData()
     }
-  };
+  }
 }
 
 export default async function RootLayout({
@@ -29,9 +45,13 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode
 }) {
+  const cookieStore = cookies()
+  const locale = resolveLocale(cookieStore.get('NEXT_LOCALE')?.value)
+  const messages = await getDictionary(locale)
   const session = await getServerSession(authOptions)
+
   return (
-    <html lang="en" className={`scroll-smooth ${inter.variable}`}>
+    <html lang={locale} className={`scroll-smooth ${inter.variable}`}>
       <head>
         <link rel="icon" href="/favicon.ico" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -47,7 +67,9 @@ export default async function RootLayout({
       </head>
       <body className={inter.className}>
         <SessionProvider session={session}>
-          {children}
+          <I18nProvider locale={locale} messages={messages}>
+            {children}
+          </I18nProvider>
         </SessionProvider>
       </body>
     </html>

@@ -1,15 +1,20 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
+import { useTranslations } from "@/providers/i18n-provider"
 
 interface SocialAuthProps {
   type: "login" | "register"
 }
 
 export function SocialAuth({ type }: SocialAuthProps) {
+  const tLogin = useTranslations("auth.login")
+  const tRegister = useTranslations("auth.register")
   const handleSocialAuth = (provider: string) => {
     alert(`This is a demo - ${provider} authentication would be implemented here`)
   }
+
+  const intro = type === "login" ? tLogin("socialIntro") : tRegister("socialIntro")
 
   return (
     <div className="space-y-3">
@@ -18,9 +23,7 @@ export function SocialAuth({ type }: SocialAuthProps) {
           <span className="w-full border-t" />
         </div>
         <div className="relative flex justify-center text-xs uppercase">
-          <span className="bg-white px-2 text-muted-foreground">
-            Or {type === "login" ? "sign in" : "sign up"} with
-          </span>
+          <span className="bg-white px-2 text-muted-foreground">{intro}</span>
         </div>
       </div>
 
