@@ -31,16 +31,20 @@ Authorization: Bearer <jwt-token>
 
 ### Drill
 
-| Field         | Type              | Description                                              |
-| ------------- | ----------------- | -------------------------------------------------------- |
-| `id`          | integer           | Primary key                                              |
-| `title`       | string            | Drill title                                              |
-| `description` | string \| null    | Optional description                                     |
-| `clubId`      | integer \| null   | Restricts visibility to a club when set; `null` = global |
-| `createdBy`   | string            | User id (admin/coach)                                    |
-| `createdAt`   | string (ISO 8601) | Creation timestamp                                       |
-| `updatedAt`   | string (ISO 8601) | Last update timestamp                                    |
-| `frames`      | `Frame[]`         | Ordered list of frames                                   |
+| Field                    | Type                                    | Description                                                                                    |
+| ------------------------ | --------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `id`                     | integer                                 | Primary key                                                                                    |
+| `title`                  | string                                  | Drill title                                                                                    |
+| `description`            | string \| null                          | Optional description                                                                           |
+| `animationGifUrl`        | string \| null                          | Public URL of the original GIF (available immediately after upload)                            |
+| `animationVideoUrl`      | string \| null                          | Public URL of the MP4 animation converted from the GIF (available after background processing) |
+| `animationVideoStatus`   | `"pending"` \| `"success"` \| `"error"` | Status of the GIF-to-MP4 conversion process                                                    |
+| `animationVideoAttempts` | integer                                 | Number of conversion attempts made (max 5 with retry)                                          |
+| `clubId`                 | integer \| null                         | Restricts visibility to a club when set; `null` = global                                       |
+| `createdBy`              | string                                  | User id (admin/coach)                                                                          |
+| `createdAt`              | string (ISO 8601)                       | Creation timestamp                                                                             |
+| `updatedAt`              | string (ISO 8601)                       | Last update timestamp                                                                          |
+| `frames`                 | `Frame[]`                               | Ordered list of frames                                                                         |
 
 ### Frame
 
@@ -85,7 +89,25 @@ GET /api/v1/drills
 
 ```jsonc
 {
-  "items": [Drill, …],
+  "items": [
+    {
+      "id": 1,
+      "title": "Give & Go Passing",
+      "description": "Basic give-and-go pattern",
+      "animationGifUrl": "https://bucket.fra1.digitaloceanspaces.com/drills/gifs/1234-uuid.gif",
+      "animationVideoUrl": "https://bucket.fra1.digitaloceanspaces.com/drills/videos/5678-uuid.mp4",
+      "animationVideoStatus": "success",
+      "animationVideoAttempts": 1,
+      "clubId": 3,
+      "createdBy": "12",
+      "createdAt": "2025-10-04T10:30:00Z",
+      "updatedAt": "2025-10-04T10:31:00Z",
+      "frames": [
+        /* Frame objects */
+      ]
+    }
+    // ... more drills
+  ],
   "page": 1,
   "totalPages": 4,
   "totalItems": 62
@@ -107,17 +129,44 @@ Authorization: Bearer <jwt>
   "title": "Give & Go Passing",
   "description": "Basic give-and-go pattern",
   "clubId": 3,
-  "thumbnail": "base64-encoded-png-without-header",  // Optional: PNG thumbnail of first frame
-  "animation_gif": "base64-encoded-gif-without-header",  // Optional: Animated GIF of all frames
+  "animation_gif": "data:image/gif;base64,...", // Uploaded immediately; converted to MP4 in background
   "frames": [Frame, …]
 }
 ```
 
-**Response 201** – returns the full newly-created `Drill`.
+> **Animation Processing Flow:**
+>
+> 1. The `animation_gif` field accepts a Base64-encoded GIF (data URI or raw string)
+> 2. The GIF is **uploaded immediately** to storage and its URL is saved in `animationGifUrl`
+> 3. The drill is created and returned with `animationVideoStatus: "pending"`
+> 4. **In the background**, the GIF is converted to MP4 with up to 5 retry attempts
+> 5. Once conversion succeeds, `animationVideoUrl` is populated and `animationVideoStatus` becomes `"success"`
+> 6. If all retries fail, `animationVideoStatus` becomes `"error"`
 
-**Notes:**
-- `thumbnail` and `animation_gif` should be raw base64 strings without the `data:image/...;base64,` prefix
-- Frontend automatically generates both when saving a drill
+**Response 201** – returns the newly-created `Drill` (with `animationVideoStatus: "pending"` if GIF was provided).
+
+```jsonc
+{
+  "id": 42,
+  "title": "Give & Go Passing",
+  "description": "Basic give-and-go pattern",
+  "animationGifUrl": "https://bucket.fra1.digitaloceanspaces.com/drills/gifs/1234-uuid.gif",
+  "animationVideoUrl": null, // Will be populated after background conversion
+  "animationVideoStatus": "pending",
+  "animationVideoAttempts": 0,
+  "clubId": 3,
+  "createdBy": "12",
+  "createdAt": "2025-10-04T10:30:00Z",
+  "updatedAt": "2025-10-04T10:30:00Z",
+  "frames": [
+    /* Frame objects */
+  ]
+}
+```
+
+**Possible errors**
+
+- `422` – invalid GIF payload or upload failure.
 
 ---
 
@@ -130,6 +179,32 @@ GET /api/v1/drills/{id}
 Path param `id` _(string \| integer)_.
 
 **Response 200** – full `Drill`.
+
+```jsonc
+{
+  "id": 42,
+  "title": "Give & Go Passing",
+  "description": "Basic give-and-go pattern",
+  "animationGifUrl": "https://bucket.fra1.digitaloceanspaces.com/drills/gifs/1234-uuid.gif",
+  "animationVideoUrl": "https://bucket.fra1.digitaloceanspaces.com/drills/videos/5678-uuid.mp4",
+  "animationVideoStatus": "success", // Can be "pending", "success", or "error"
+  "animationVideoAttempts": 2,
+  "clubId": 3,
+  "createdBy": "12",
+  "createdAt": "2025-10-04T10:30:00Z",
+  "updatedAt": "2025-10-04T10:31:00Z",
+  "frames": [
+    /* Frame objects */
+  ]
+}
+```
+
+> **Frontend Integration Tip:**
+>
+> - If `animationVideoStatus === "pending"`, show a loading indicator or use `animationGifUrl` as a fallback
+> - If `animationVideoStatus === "success"`, display the video using `animationVideoUrl`
+> - If `animationVideoStatus === "error"`, show `animationGifUrl` or an error message
+> - Poll this endpoint every 3-5 seconds while status is `"pending"` to check for completion
 
 **Response 404** – drill not found.
 
@@ -149,13 +224,32 @@ Partial or full update; any of these fields may be present:
   "title": "…",
   "description": "…",
   "clubId": 7,
+  "animation_gif": "data:image/gif;base64,...", // Optional: uploads new GIF and triggers MP4 conversion
   "frames": [Frame, …]   // Replaces all frames when provided
 }
 ```
 
+> **Note:** If `animation_gif` is provided, the drill's `animationVideoStatus` will be reset to `"pending"` and a new background conversion will start.
+
 **Response 200** – updated `Drill`.
 
+```jsonc
+{
+  "id": 42,
+  "title": "Updated Title",
+  "animationGifUrl": "https://bucket.fra1.digitaloceanspaces.com/drills/gifs/new-1234-uuid.gif",
+  "animationVideoUrl": null, // Will be updated after background conversion
+  "animationVideoStatus": "pending",
+  "animationVideoAttempts": 0
+  // ... other fields
+}
+```
+
 **Response 404** – not found.
+
+**Possible errors**
+
+- `422` – invalid GIF payload or upload failure.
 
 ---
 
@@ -209,6 +303,17 @@ Status code conveys the category (400, 401, 404, 500…).
 
 ---
 
+## Animation Status Reference
+
+| Status      | Description                                                                    | Frontend Action                                                  |
+| ----------- | ------------------------------------------------------------------------------ | ---------------------------------------------------------------- |
+| `"pending"` | GIF uploaded, MP4 conversion in progress (background processing with retry)    | Show loading spinner or display `animationGifUrl` as placeholder |
+| `"success"` | MP4 conversion completed successfully, `animationVideoUrl` is ready            | Display video player with `animationVideoUrl`                    |
+| `"error"`   | MP4 conversion failed after 5 retry attempts, only `animationGifUrl` available | Show `animationGifUrl` or error message                          |
+
+---
+
 ## Change Log
 
+- **2025-10-04** – Added background GIF-to-MP4 conversion with retry logic. New fields: `animationGifUrl`, `animationVideoStatus`, `animationVideoAttempts`.
 - **2025-09-22** – Initial release of Drills API v1.
