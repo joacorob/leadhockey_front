@@ -10,9 +10,8 @@ interface RelatedVideosProps {
 
 export function RelatedVideos({ playlistData  }: RelatedVideosProps) {
   const router = useRouter()
-  
-  // Filter out current video and get related videos
-  const relatedVideos = playlistData.sessions.slice(0, 8)
+  const sessions = Array.isArray(playlistData?.sessions) ? playlistData.sessions : []
+  const relatedVideos = sessions.slice(0, 8)
 
   const handleVideoClick = (videoId: string) => {
     router.push(`/video/${videoId}`)
@@ -23,7 +22,10 @@ export function RelatedVideos({ playlistData  }: RelatedVideosProps) {
       <h2 className="text-xl font-semibold text-gray-900 mb-6">Related Videos</h2>
       
       <div className="space-y-4">
-        {relatedVideos.map((video: any) => (
+        {relatedVideos.length === 0 ? (
+          <p className="text-sm text-gray-600">No related videos available right now.</p>
+        ) : (
+          relatedVideos.map((video: any) => (
           <div
             key={video.id}
             onClick={() => handleVideoClick(video.id)}
@@ -68,7 +70,8 @@ export function RelatedVideos({ playlistData  }: RelatedVideosProps) {
               </div>
             </div>
           </div>
-        ))}
+          ))
+        )}
       </div>
 
       {/* View All Button */}

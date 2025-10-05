@@ -76,6 +76,8 @@ export function VideoInfo({ video }: VideoInfoProps) {
     // Handle report functionality
   }
 
+  const description = video.description ?? ""
+
   return (
     <div className="bg-white rounded-lg p-6 shadow-sm">
       {/* Video Title */}
@@ -142,9 +144,9 @@ export function VideoInfo({ video }: VideoInfoProps) {
       {/* Description */}
       <div className="mb-6">
         <div className={`text-gray-700 ${showFullDescription ? '' : 'line-clamp-3'}`}>
-          {video.description}
+          {description || "No description available for this video."}
         </div>
-        {video.description.length > 200 && (
+        {description.length > 200 && (
           <Button
             onClick={() => setShowFullDescription(!showFullDescription)}
             variant="ghost"
