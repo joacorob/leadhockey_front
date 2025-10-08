@@ -155,11 +155,6 @@ export default function SidebarClient({ categories: initialCategories }: Sidebar
         >
           <div className="flex flex-col">
             <span>{item.title}</span>
-            {item.description && (
-              <span className="text-white/60 text-[11px] font-normal normal-case tracking-normal">
-                {item.description}
-              </span>
-            )}
           </div>
           <ChevronRight className="w-4 h-4 group-open:hidden" />
           <ChevronDown className="w-4 h-4 hidden group-open:block" />
