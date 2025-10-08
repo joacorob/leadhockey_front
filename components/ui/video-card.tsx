@@ -1,13 +1,19 @@
 "use client"
 
 import Image from "next/image"
-import { Play, User } from 'lucide-react'
+import { Play, User, Clock } from 'lucide-react'
 import { Video } from "@/data/videos"
 import { Badge } from "@/components/ui/badge"
 import { useRouter } from "next/navigation"
+import { formatTimeRemaining } from "@/lib/types/continue-watching"
 
 interface VideoCardProps {
-  video: Video
+  video: Video & {
+    progressPercent?: number
+    positionSec?: number
+    durationSec?: number
+    contentType?: "VIDEO_SESSION" | "DRILL"
+  }
   onClick?: () => void
 }
 
@@ -18,8 +24,19 @@ export function VideoCard({ video, onClick }: VideoCardProps) {
     if (onClick) {
       onClick()
     }
-    router.push(`/video/${video.id}`)
+    
+    // Navegar según el tipo de contenido
+    if (video.contentType === "DRILL") {
+      router.push(`/drills/${video.id}`)
+    } else {
+      router.push(`/video/${video.id}`)
+    }
   }
+
+  const hasProgress = typeof video.progressPercent === "number"
+  const timeRemaining = hasProgress && video.positionSec && video.durationSec
+    ? video.durationSec - video.positionSec
+    : 0
 
   return (
     <div 
@@ -55,15 +72,38 @@ export function VideoCard({ video, onClick }: VideoCardProps) {
             </Badge>
           </div>
         )}
+        
+        {/* Progress bar */}
+        {hasProgress && (
+          <div className="absolute bottom-0 left-0 right-0 h-1 bg-gray-300/50">
+            <div 
+              className="h-full bg-blue-600 transition-all"
+              style={{ width: `${video.progressPercent}%` }}
+            />
+          </div>
+        )}
       </div>
 
       {/* Content */}
       <div className="p-4">
         <h3 className="font-semibold text-sm mb-2 line-clamp-2">{video.title}</h3>
-        <div className="flex items-center text-xs text-gray-500">
-          <User className="w-3 h-3 mr-1" />
-          {video.coach}
-        </div>
+        
+        {hasProgress ? (
+          <div className="flex items-center justify-between text-xs">
+            <div className="flex items-center text-gray-500">
+              <Clock className="w-3 h-3 mr-1" />
+              {formatTimeRemaining(timeRemaining)}
+            </div>
+            <span className="text-blue-600 font-medium">
+              {Math.floor(video.progressPercent || 0)}%
+            </span>
+          </div>
+        ) : (
+          <div className="flex items-center text-xs text-gray-500">
+            <User className="w-3 h-3 mr-1" />
+            {video.coach}
+          </div>
+        )}
       </div>
     </div>
   )

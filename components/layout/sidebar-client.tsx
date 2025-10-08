@@ -51,6 +51,10 @@ export default function SidebarClient({ categories: initialCategories }: Sidebar
 
   const sidebarItems: SidebarItem[] = [
     {
+      title: 'Start',
+      href: '/dashboard',
+    },
+    {
       title: 'LEARN',
       description: "Explore LEAD's educational content",
       children: [
@@ -73,18 +77,10 @@ export default function SidebarClient({ categories: initialCategories }: Sidebar
       title: 'TRAIN',
       description: 'Your training tools & planning',
       children: [
-        { title: 'All trainings', href: '/trains' },
+        // { title: 'All trainings', href: '/trains' },
         { title: 'My drills', href: '/train/drills' },
         { title: 'My trainings', href: '/train/trainings' },
         { title: 'Club trainings', href: '/train/club-trainings' },
-      ],
-    },
-    {
-      title: 'COACH',
-      description: 'Coaching tools & team management',
-      children: [
-        { title: 'Coaching board', href: '/coach/board' },
-        { title: 'Team management', href: '/coach/team-management' },
       ],
     },
     {

@@ -73,7 +73,13 @@ export function VideoViewContent({
                 {/* Video Player */}
                 {mappedVideo ? (
                   <div className="bg-black rounded-lg overflow-hidden">
-                    <VideoPlayer videoUrl={`${mappedVideo.videoUrl}`} subtitles={subtitles} />
+                    <VideoPlayer 
+                      videoUrl={`${mappedVideo.videoUrl}`} 
+                      subtitles={subtitles}
+                      contentId={videoId}
+                      contentType="VIDEO_SESSION"
+                      enableProgressTracking={true}
+                    />
                   </div>
                 ) : (
                   <p className="text-center text-red-600">Failed to load video.</p>

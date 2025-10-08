@@ -7,6 +7,7 @@ import videojs from "video.js";
 import "@videojs/http-streaming";
 import { Parser as M3U8Parser } from "m3u8-parser";
 import "video.js/dist/video-js.css";
+import { useVideoProgress } from "@/lib/hooks/use-video-progress";
 
 type VideoJsPlayer = any;
 
@@ -33,6 +34,12 @@ interface VideoPlayerProps {
   options?: Record<string, unknown>;
   /** Subtitle tracks */
   subtitles?: Subtitle[];
+  /** Content ID for progress tracking */
+  contentId?: string;
+  /** Content type for progress tracking */
+  contentType?: "VIDEO_SESSION" | "DRILL";
+  /** Enable progress tracking (requires contentId and contentType) */
+  enableProgressTracking?: boolean;
 }
 
 // -----------------------------------------------------------------------------
@@ -151,6 +158,9 @@ export function VideoPlayer({
   fluid = true,
   options = {},
   subtitles = [],
+  contentId,
+  contentType = "VIDEO_SESSION",
+  enableProgressTracking = false,
 }: VideoPlayerProps) {
   console.log("VideoPlayer", videoUrl);
   // If consumer did not provide subtitles, we will attempt to detect them from
@@ -159,6 +169,9 @@ export function VideoPlayer({
 
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const playerRef = useRef<VideoJsPlayer | null>(null);
+  const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  
+  const { getProgress, saveProgress } = useVideoProgress();
 
   // Helper to infer MIME type from url
   const inferMimeType = (url: string): string | undefined => {
@@ -331,6 +344,71 @@ export function VideoPlayer({
 
     fetchAndParse();
   }, [videoUrl, subtitles]);
+
+  // Progress tracking: Load initial progress and setup tracking
+  useEffect(() => {
+    if (!enableProgressTracking || !contentId || !playerRef.current) return;
+
+    const player = playerRef.current as VideoJsPlayer;
+
+    // Load saved progress
+    const loadProgress = async () => {
+      const progress = await getProgress(contentId, contentType);
+      
+      if (progress && progress.status === "IN_PROGRESS" && progress.positionSec > 0) {
+        // Resume from saved position
+        player.one("loadedmetadata", () => {
+          player.currentTime(progress.positionSec);
+          console.log(`▶️ Resuming from ${Math.floor(progress.positionSec)}s`);
+        });
+      }
+    };
+
+    loadProgress();
+  }, [enableProgressTracking, contentId, contentType, getProgress]);
+
+  // Progress tracking: Setup periodic saving
+  useEffect(() => {
+    if (!enableProgressTracking || !contentId || !playerRef.current) return;
+
+    const player = playerRef.current as VideoJsPlayer;
+
+    const saveCurrentProgress = () => {
+      const position = player.currentTime();
+      const duration = player.duration();
+      
+      if (position && duration) {
+        saveProgress(contentId, contentType, position, duration);
+      }
+    };
+
+    // Save progress every 10 seconds
+    progressIntervalRef.current = setInterval(saveCurrentProgress, 10000);
+
+    // Save on pause
+    const handlePause = () => {
+      saveCurrentProgress();
+    };
+
+    // Save before page unload
+    const handleBeforeUnload = () => {
+      saveCurrentProgress();
+    };
+
+    player.on("pause", handlePause);
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    return () => {
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+      }
+      player.off("pause", handlePause);
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      
+      // Save final progress on cleanup
+      saveCurrentProgress();
+    };
+  }, [enableProgressTracking, contentId, contentType, saveProgress]);
 
   // Dispose player on unmount
   useEffect(() => {

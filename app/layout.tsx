@@ -6,6 +6,7 @@ import { MobileNav } from '@/components/layout/mobile-nav'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import SessionProvider from '@/providers/provider'
+import { Toaster } from '@/components/ui/toaster'
 
 const inter = Inter({ 
   subsets: ['latin'],
@@ -47,6 +48,7 @@ export default async function RootLayout({
       </head>
       <body className={inter.className}>
         <SessionProvider session={session}>
+          <Toaster />
           {children}
         </SessionProvider>
       </body>

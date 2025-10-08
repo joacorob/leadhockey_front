@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import Image from "next/image"
 import { Heart, Share2, Flag, Eye, Calendar, Tag } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -146,7 +145,7 @@ export function VideoInfo({ video }: VideoInfoProps) {
         <div className={`text-gray-700 ${showFullDescription ? '' : 'line-clamp-3'}`}>
           {description || "No description available for this video."}
         </div>
-        {description.length > 200 && (
+        {video.description?.length && video.description.length > 200 && (
           <Button
             onClick={() => setShowFullDescription(!showFullDescription)}
             variant="ghost"
