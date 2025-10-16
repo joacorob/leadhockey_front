@@ -60,8 +60,7 @@ export default function SidebarClient({ categories: initialCategories }: Sidebar
       children: [
         // categorías desde la API
         ...categories.map((c) => ({ title: c.name, href: `/watch?category=${c.id}` })),
-        { title: 'My playlists', href: '/watch/playlists' },
-        { title: 'My favourites', href: '/watch/favourites' },
+        { title: 'My favourites', href: '/favourites' },
       ],
     },
     {
@@ -70,17 +69,16 @@ export default function SidebarClient({ categories: initialCategories }: Sidebar
       children: [
         { title: 'Create drill', href: '/create/drill' },
         { title: 'Create training', href: '/create/train' },
-        { title: 'Create club training', href: '/create/club-training' },
+        { title: 'Create session', href: '/create/session' },
       ],
     },
     {
       title: 'TRAIN',
       description: 'Your training tools & planning',
       children: [
-        // { title: 'All trainings', href: '/trains' },
-        { title: 'My drills', href: '/train/drills' },
-        { title: 'My trainings', href: '/train/trainings' },
-        { title: 'Club trainings', href: '/train/club-trainings' },
+        { title: 'My drills', href: '/my/drills' },
+        { title: 'My trainings', href: '/my/trainings' },
+        { title: 'Club trainings', href: '/train/club-sessions' },
       ],
     },
     {

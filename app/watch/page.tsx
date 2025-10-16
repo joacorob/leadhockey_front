@@ -15,6 +15,7 @@ import { useSearchParams } from "next/navigation"
 import React from "react"
 import { Filter as VideoFilter } from "@/lib/types/api"
 import { Checkbox } from "@/components/ui/checkbox"
+import { WatchContent, mapContentItem } from "@/lib/types/watch"
 
 interface Category {
   id: string
@@ -26,24 +27,7 @@ interface Category {
   image?: string
 }
 
-interface Video {
-  id: string
-  title: string
-  description: string
-  thumbnail_url: string
-  video_url: string
-  duration: string
-  category_id: string
-  category: string
-  coach: string
-  tags: string[]
-  created_at: string
-  updated_at: string
-  views: number
-  likes: number
-  thumbnail: string
-  isEliminating?: boolean
-}
+// Using WatchContent type from lib/types/watch.ts
 
 interface ApiResponse<T> {
   success: boolean
@@ -53,7 +37,7 @@ interface ApiResponse<T> {
 export default function WatchPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("all")
-  const [filteredVideos, setFilteredVideos] = useState<Video[]>([])
+  const [filteredVideos, setFilteredVideos] = useState<WatchContent[]>([])
   const [filters, setFilters] = useState<VideoFilter[]>([])
   const [activeFilters, setActiveFilters] = useState<Record<string, any>>({})
   const [showFilters, setShowFilters] = useState(false)
@@ -81,7 +65,12 @@ export default function WatchPage() {
     return match?.id
   }, [selectedCategory, categories])
 
-  const { data: videosResponse, loading: videosLoading } = useApi<VideosApiResponse>("/videos")
+  // Determine if we should fetch drills or videos based on category
+  const DEFAULT_DRILL_CATEGORY_ID = process.env.NEXT_PUBLIC_DEFAULT_DRILL_CATEGORY_ID || "2"
+  const isDrillCategory = selectedCategoryId === DEFAULT_DRILL_CATEGORY_ID
+  const contentEndpoint = isDrillCategory ? "/drills" : "/videos"
+
+  const { data: videosResponse, loading: videosLoading } = useApi<VideosApiResponse>(contentEndpoint)
   const {
     data: filtersResponse,
     loading: filtersLoading,
@@ -90,17 +79,12 @@ export default function WatchPage() {
     "/filters",
     selectedCategoryId ? { categoryId: selectedCategoryId } : undefined,
   )
-  
-  useEffect(() => {
-    console.log("categoriesResponse", categoriesResponse)
-    console.log("videosLoading", videosLoading)
-    console.log("filters", filtersResponse)
-  }, [categoriesLoading, videosLoading])
 
   const videos = React.useMemo(()=>{
     const raw = (videosResponse as any)?.data?.data?.items ?? [];
-    return Array.isArray(raw) ? raw as Video[] : [];
-  }, [videosResponse]);
+    const contentType = isDrillCategory ? "DRILL" : "VIDEO"
+    return Array.isArray(raw) ? raw.map((item: any) => mapContentItem(item, contentType)) : [];
+  }, [videosResponse, isDrillCategory]);
 
 
   useEffect(() => {
@@ -209,18 +193,8 @@ export default function WatchPage() {
       }
     })
 
-    // Map API video format to UI expected format
-    const mappedVideos = filtered.map((video) => ({
-      ...video,
-      thumbnail: (video as any).thumbnail || (video as any).thumbnail_url || "/placeholder.svg",
-      duration: typeof (video as any).duration === "number" ? formatDuration((video as any).duration) : (video as any).duration,
-      video_url: (video as any).video_url || (video as any).videoUrl,
-      category_id: (video as any).category_id || (video as any).category,
-      category: categories.find((cat) => cat.id === ((video as any).category_id || (video as any).category))?.name ?? "Unknown",
-      coach: typeof (video as any).coach === "string" ? (video as any).coach : (video as any).coach?.name ?? "Unknown",
-    }))
-
-    setFilteredVideos(mappedVideos as Video[])
+    // Videos are already mapped by the useMemo above
+    setFilteredVideos(filtered)
   }
 
   // Re-filter when activeFilters changes
@@ -229,14 +203,8 @@ export default function WatchPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeFilters])
 
-  const formatDuration = (seconds: number) => {
-    const mins = Math.floor(seconds / 60)
-    const secs = seconds % 60
-    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`
-  }
-
-  const handleVideoClick = (video: Video) => {
-    console.log("Playing video:", video.title)
+  const handleVideoClick = (video: WatchContent) => {
+    console.log("Playing content:", video.title)
   }
 
   const categoryOptions = ["all", ...(categories || []).map((cat) => cat.name)]
@@ -282,7 +250,7 @@ export default function WatchPage() {
             <div className="max-w-7xl mx-auto">
               {/* Page header */}
               <div className="mb-6">
-                <h1 className="text-2xl font-bold text-gray-900 mb-6">Watch Videos</h1>
+                <h1 className="text-2xl font-bold text-gray-900 mb-6">Watch Content</h1>
 
                 <div className="mb-8">
                   <h2 className="text-lg font-semibold text-gray-800 mb-4">Browse by Category</h2>
@@ -326,7 +294,7 @@ export default function WatchPage() {
                   <div className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                     <Input
-                      placeholder="Search videos, coaches, or tags..."
+                      placeholder="Search content, coaches, or tags..."
                       value={searchTerm}
                       onChange={(e) => handleSearch(e.target.value)}
                       className="pl-10"
@@ -431,7 +399,7 @@ export default function WatchPage() {
                 <>
                   {/* Results count */}
                   <p className="text-sm text-gray-600 mb-4">
-                    Showing {filteredVideos.length} video{filteredVideos.length !== 1 ? "s" : ""}
+                    Showing {filteredVideos.length} item{filteredVideos.length !== 1 ? "s" : ""}
                   </p>
 
                   {/* Video grid */}
@@ -444,7 +412,7 @@ export default function WatchPage() {
                   {/* Empty state */}
                   {filteredVideos.length === 0 && !videosLoading && (
                     <div className="text-center py-12">
-                      <p className="text-gray-500 mb-4">No videos found matching your criteria</p>
+                      <p className="text-gray-500 mb-4">No content found matching your criteria</p>
                       <Button
                         onClick={() => {
                           setSearchTerm("")

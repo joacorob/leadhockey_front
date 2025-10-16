@@ -58,7 +58,7 @@ export default function MyTrainPage() {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <Link href="/train/drills">
+                  <Link href="/my/drills">
                     <Button
                       className="h-auto p-6 flex flex-col items-center gap-3 bg-transparent w-full"
                       variant="outline"
@@ -70,14 +70,14 @@ export default function MyTrainPage() {
                       </div>
                     </Button>
                   </Link>
-                  <Link href="/train/sessions">
+                  <Link href="/my/trainings">
                     <Button
                       className="h-auto p-6 flex flex-col items-center gap-3 bg-transparent w-full"
                       variant="outline"
                     >
                       <Calendar className="w-8 h-8 text-green-600" />
                       <div className="text-center">
-                        <span className="font-medium">My Sessions</span>
+                        <span className="font-medium">My Trainings</span>
                         <p className="text-xs text-gray-600 mt-1">Personal training sessions</p>
                       </div>
                     </Button>

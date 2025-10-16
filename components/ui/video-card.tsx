@@ -2,17 +2,17 @@
 
 import Image from "next/image"
 import { Play, User, Clock } from 'lucide-react'
-import { Video } from "@/data/videos"
 import { Badge } from "@/components/ui/badge"
 import { useRouter } from "next/navigation"
 import { formatTimeRemaining } from "@/lib/types/continue-watching"
+import { WatchContent, ContentType } from "@/lib/types/watch"
 
 interface VideoCardProps {
-  video: Video & {
+  video: WatchContent & {
     progressPercent?: number
     positionSec?: number
     durationSec?: number
-    contentType?: "VIDEO_SESSION" | "DRILL"
+    isEliminating?: boolean
   }
   onClick?: () => void
 }
@@ -28,6 +28,8 @@ export function VideoCard({ video, onClick }: VideoCardProps) {
     // Navegar según el tipo de contenido
     if (video.contentType === "DRILL") {
       router.push(`/drills/${video.id}`)
+    } else if (video.contentType === "PRACTICE_SESSION") {
+      router.push(`/train/${video.id}`)
     } else {
       router.push(`/video/${video.id}`)
     }
