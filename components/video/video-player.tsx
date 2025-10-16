@@ -356,8 +356,12 @@ export function VideoPlayer({
       const progress = await getProgress(contentId, contentType);
       
       if (progress && progress.status === "IN_PROGRESS" && progress.positionSec > 0) {
+        // Verify player still exists before attempting to use it
+        if (!playerRef.current) return;
+        
         // Resume from saved position
         player.one("loadedmetadata", () => {
+          if (!playerRef.current) return;
           player.currentTime(progress.positionSec);
           console.log(`▶️ Resuming from ${Math.floor(progress.positionSec)}s`);
         });
@@ -374,6 +378,8 @@ export function VideoPlayer({
     const player = playerRef.current as VideoJsPlayer;
 
     const saveCurrentProgress = () => {
+      if (!playerRef.current) return;
+      
       const position = player.currentTime();
       const duration = player.duration();
       
@@ -402,11 +408,12 @@ export function VideoPlayer({
       if (progressIntervalRef.current) {
         clearInterval(progressIntervalRef.current);
       }
-      player.off("pause", handlePause);
+      if (playerRef.current) {
+        player.off("pause", handlePause);
+        // Save final progress on cleanup
+        saveCurrentProgress();
+      }
       window.removeEventListener("beforeunload", handleBeforeUnload);
-      
-      // Save final progress on cleanup
-      saveCurrentProgress();
     };
   }, [enableProgressTracking, contentId, contentType, saveProgress]);
 
