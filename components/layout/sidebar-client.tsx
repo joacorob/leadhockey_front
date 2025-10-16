@@ -69,7 +69,7 @@ export default function SidebarClient({ categories: initialCategories }: Sidebar
       children: [
         { title: 'Create drill', href: '/create/drill' },
         { title: 'Create training', href: '/create/train' },
-        { title: 'Create session', href: '/create/session' },
+        // { title: 'Create session', href: '/create/session' },
       ],
     },
     {
