@@ -24,7 +24,10 @@ interface SidebarItem {
 }
 
 export default function SidebarClient({ categories: initialCategories }: SidebarClientProps) {
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
   const [categories, setCategories] = useState<Category[]>(initialCategories ?? [])
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(() => new Set())
 
   useEffect(() => {
     if (initialCategories?.length) return // ya vino del server (por si acaso)
@@ -92,9 +95,6 @@ export default function SidebarClient({ categories: initialCategories }: Sidebar
     },
   ]  
 
-  const pathname = usePathname()
-  const searchParams = useSearchParams()
-
   // Helper to check if a given href matches current location (including query params)
   const isHrefActive = (href?: string) => {
     if (!href) return false
@@ -119,6 +119,16 @@ export default function SidebarClient({ categories: initialCategories }: Sidebar
     return item.children ? item.children.some(isItemActive) : false
   }
 
+  // Auto-expand the section that contains the active route
+  useEffect(() => {
+    const activeSection = sidebarItems.find((item) => isItemActive(item))
+    if (activeSection && activeSection.children) {
+      setExpandedSections(new Set([activeSection.title]))
+    } else {
+      setExpandedSections(new Set())
+    }
+  }, [pathname, searchParams])
+
   const renderSidebarItem = (item: SidebarItem, level = 0): JSX.Element => {
     const hasChildren = item.children && item.children.length > 0
     const active = isItemActive(item)
@@ -140,16 +150,28 @@ export default function SidebarClient({ categories: initialCategories }: Sidebar
       )
     }
 
-    const defaultOpen = level === 0 && (['CREATE', 'TRAIN'].includes(item.title) || active)
+    const isExpanded = expandedSections.has(item.title)
 
     return (
-      <details key={item.title} className="group" open={defaultOpen}>
+      <details key={item.title} className="group" open={isExpanded}>
         <summary
           className={cn(
             'w-full flex items-center justify-between px-4 py-3 text-left text-sm font-medium hover:bg-white/10 transition-colors cursor-pointer select-none',
             active ? 'bg-white/20 text-white' : 'text-white',
             level === 0 && 'text-xs uppercase tracking-wider'
           )}
+          onClick={(e) => {
+            e.preventDefault()
+            setExpandedSections((prev) => {
+              const next = new Set(prev)
+              if (next.has(item.title)) {
+                next.delete(item.title)
+              } else {
+                next.add(item.title)
+              }
+              return next
+            })
+          }}
         >
           <div className="flex flex-col">
             <span>{item.title}</span>
