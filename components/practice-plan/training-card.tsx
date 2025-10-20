@@ -1,5 +1,14 @@
+"use client"
+
 import Link from "next/link"
-import { User, Clock } from "lucide-react"
+import { User, Clock, MoreVertical, Copy, Trash2 } from "lucide-react"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Button } from "@/components/ui/button"
 
 interface PracticePlan {
   id: number
@@ -28,9 +37,11 @@ interface PracticePlan {
 
 interface TrainingCardProps {
   plan: PracticePlan
+  onClone?: (id: number) => void
+  onDelete?: (id: number) => void
 }
 
-export function TrainingCard({ plan }: TrainingCardProps) {
+export function TrainingCard({ plan, onClone, onDelete }: TrainingCardProps) {
   // Calculate total duration from items
   const totalDuration = plan.items.reduce((acc, item) => {
     const duration = item.element?.duration || 0
@@ -71,9 +82,21 @@ export function TrainingCard({ plan }: TrainingCardProps) {
   
   const thumbnail = getThumbnail()
 
+  const handleClone = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    onClone?.(plan.id)
+  }
+
+  const handleDelete = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    onDelete?.(plan.id)
+  }
+
   return (
-    <Link href={`/train/${plan.id}`}>
-      <div className="group bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-lg transition-shadow cursor-pointer">
+    <div className="group bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-lg transition-shadow cursor-pointer relative">
+      <Link href={`/train/${plan.id}`}>
         {/* Thumbnail */}
         <div className="relative aspect-video bg-blue-900">
           <img
@@ -104,8 +127,43 @@ export function TrainingCard({ plan }: TrainingCardProps) {
             <span>Created by you</span>
           </div>
         </div>
-      </div>
-    </Link>
+      </Link>
+
+      {/* Actions menu */}
+      {(onClone || onDelete) && (
+        <div className="absolute top-2 right-2 z-10">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0 bg-white/90 hover:bg-white shadow-sm"
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                }}
+              >
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {onClone && (
+                <DropdownMenuItem onClick={handleClone}>
+                  <Copy className="mr-2 h-4 w-4" />
+                  Clone
+                </DropdownMenuItem>
+              )}
+              {onDelete && (
+                <DropdownMenuItem onClick={handleDelete} className="text-red-600">
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      )}
+    </div>
   )
 }
 

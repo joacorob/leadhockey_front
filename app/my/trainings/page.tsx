@@ -7,9 +7,21 @@ import { Header } from "@/components/layout/header"
 import { TrainingCard } from "@/components/practice-plan/training-card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Search } from "lucide-react"
+import { Search, Loader2 } from "lucide-react"
 import Link from "next/link"
 import { useApi } from "@/lib/hooks/use-api"
+import { useToast } from "@/hooks/use-toast"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { useRouter } from "next/navigation"
 
 interface PracticePlanSummary {
   practicePlanId: number
@@ -39,8 +51,15 @@ interface ApiResponse {
 export default function MyTrainingsPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [filteredTrainings, setFilteredTrainings] = useState<any[]>([])
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [selectedPlanId, setSelectedPlanId] = useState<number | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [isCloning, setIsCloning] = useState(false)
+  const [refreshKey, setRefreshKey] = useState(0)
 
-  const { data: trainingsResponse, loading: trainingsLoading } = useApi<ApiResponse>("/me/practice-sessions")
+  const { data: trainingsResponse, loading: trainingsLoading } = useApi<ApiResponse>(`/me/practice-sessions?refresh=${refreshKey}`)
+  const { toast } = useToast()
+  const router = useRouter()
 
   const trainings = useMemo(() => {
     // API response is double-nested: response.data.data.items
@@ -82,6 +101,87 @@ export default function MyTrainingsPage() {
 
   const handleSearch = (term: string) => {
     setSearchTerm(term)
+  }
+
+  const handleClone = async (planId: number) => {
+    if (isCloning) return
+
+    setIsCloning(true)
+    try {
+      const response = await fetch(`/api/practice-plans/${planId}/clone`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error?.message || "Failed to clone training plan")
+      }
+
+      const result = await response.json()
+
+      toast({
+        title: "Success",
+        description: "Training plan cloned successfully!",
+      })
+
+      // Refresh the list
+      setRefreshKey((prev) => prev + 1)
+
+      // Navigate to the new plan
+      if (result.data?.id) {
+        router.push(`/train/${result.data.id}`)
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to clone training plan",
+        variant: "destructive",
+      })
+    } finally {
+      setIsCloning(false)
+    }
+  }
+
+  const handleDeleteClick = (planId: number) => {
+    setSelectedPlanId(planId)
+    setDeleteDialogOpen(true)
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (!selectedPlanId || isDeleting) return
+
+    setIsDeleting(true)
+    try {
+      const response = await fetch(`/api/practice-plans/${selectedPlanId}`, {
+        method: "DELETE",
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error?.message || "Failed to delete training plan")
+      }
+
+      toast({
+        title: "Success",
+        description: "Training plan deleted successfully.",
+      })
+
+      // Refresh the list
+      setRefreshKey((prev) => prev + 1)
+      setDeleteDialogOpen(false)
+      setSelectedPlanId(null)
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete training plan",
+        variant: "destructive",
+      })
+    } finally {
+      setIsDeleting(false)
+    }
   }
 
   return (
@@ -155,7 +255,12 @@ export default function MyTrainingsPage() {
                   {filteredTrainings.length > 0 ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                       {filteredTrainings.map((training) => (
-                        <TrainingCard key={training.id} plan={training} />
+                        <TrainingCard 
+                          key={training.id} 
+                          plan={training}
+                          onClone={handleClone}
+                          onDelete={handleDeleteClick}
+                        />
                       ))}
                     </div>
                   ) : (
@@ -201,6 +306,35 @@ export default function MyTrainingsPage() {
           </Suspense>
         </main>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Training Plan</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this training plan? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              disabled={isDeleting}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                "Delete"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

@@ -1,11 +1,18 @@
 "use client"
 
 import Image from "next/image"
-import { Play, User, Clock } from 'lucide-react'
+import { Play, User, Clock, MoreVertical, Trash2 } from 'lucide-react'
 import { Badge } from "@/components/ui/badge"
 import { useRouter } from "next/navigation"
 import { formatTimeRemaining } from "@/lib/types/continue-watching"
 import { WatchContent, ContentType } from "@/lib/types/watch"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Button } from "@/components/ui/button"
 
 interface VideoCardProps {
   video: WatchContent & {
@@ -15,9 +22,10 @@ interface VideoCardProps {
     isEliminating?: boolean
   }
   onClick?: () => void
+  onDelete?: (id: number) => void
 }
 
-export function VideoCard({ video, onClick }: VideoCardProps) {
+export function VideoCard({ video, onClick, onDelete }: VideoCardProps) {
   const router = useRouter()
 
   const handleClick = () => {
@@ -35,6 +43,12 @@ export function VideoCard({ video, onClick }: VideoCardProps) {
     }
   }
 
+  const handleDelete = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    onDelete?.(video.id)
+  }
+
   const hasProgress = typeof video.progressPercent === "number"
   const timeRemaining = hasProgress && video.positionSec && video.durationSec
     ? video.durationSec - video.positionSec
@@ -42,7 +56,7 @@ export function VideoCard({ video, onClick }: VideoCardProps) {
 
   return (
     <div 
-      className="group cursor-pointer bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow"
+      className="group cursor-pointer bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow relative"
       onClick={handleClick}
     >
       {/* Thumbnail */}
@@ -82,6 +96,33 @@ export function VideoCard({ video, onClick }: VideoCardProps) {
               className="h-full bg-blue-600 transition-all"
               style={{ width: `${video.progressPercent}%` }}
             />
+          </div>
+        )}
+
+        {/* Actions menu */}
+        {onDelete && (
+          <div className="absolute top-2 right-2 z-10">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0 bg-white/90 hover:bg-white shadow-sm"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                  }}
+                >
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleDelete} className="text-red-600">
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         )}
       </div>

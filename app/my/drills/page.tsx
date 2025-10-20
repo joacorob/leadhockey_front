@@ -7,10 +7,21 @@ import { Header } from "@/components/layout/header"
 import { VideoCard } from "@/components/ui/video-card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Search } from "lucide-react"
+import { Search, Loader2 } from "lucide-react"
 import Link from "next/link"
 import { WatchContent, mapContentItem } from "@/lib/types/watch"
 import { useApi } from "@/lib/hooks/use-api"
+import { useToast } from "@/hooks/use-toast"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 interface ApiResponse {
   success: boolean
@@ -24,8 +35,13 @@ interface ApiResponse {
 export default function MyDrillsPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [filteredDrills, setFilteredDrills] = useState<WatchContent[]>([])
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [selectedDrillId, setSelectedDrillId] = useState<number | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [refreshKey, setRefreshKey] = useState(0)
 
-  const { data: drillsResponse, loading: drillsLoading } = useApi<ApiResponse>("/me/drills")
+  const { data: drillsResponse, loading: drillsLoading } = useApi<ApiResponse>(`/me/drills?refresh=${refreshKey}`)
+  const { toast } = useToast()
 
   const drills = useMemo(() => {
     // API returns nested structure: data.data.items
@@ -54,6 +70,45 @@ export default function MyDrillsPage() {
 
   const handleSearch = (term: string) => {
     setSearchTerm(term)
+  }
+
+  const handleDeleteClick = (drillId: number) => {
+    setSelectedDrillId(drillId)
+    setDeleteDialogOpen(true)
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (!selectedDrillId || isDeleting) return
+
+    setIsDeleting(true)
+    try {
+      const response = await fetch(`/api/drills/${selectedDrillId}`, {
+        method: "DELETE",
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error?.message || "Failed to delete drill")
+      }
+
+      toast({
+        title: "Success",
+        description: "Drill deleted successfully. It has been removed from all practice plans.",
+      })
+
+      // Refresh the list
+      setRefreshKey((prev) => prev + 1)
+      setDeleteDialogOpen(false)
+      setSelectedDrillId(null)
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete drill",
+        variant: "destructive",
+      })
+    } finally {
+      setIsDeleting(false)
+    }
   }
 
   return (
@@ -127,7 +182,11 @@ export default function MyDrillsPage() {
                   {filteredDrills.length > 0 ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                       {filteredDrills.map((drill) => (
-                        <VideoCard key={drill.id} video={drill} />
+                        <VideoCard 
+                          key={drill.id} 
+                          video={drill}
+                          onDelete={handleDeleteClick}
+                        />
                       ))}
                     </div>
                   ) : (
@@ -173,6 +232,35 @@ export default function MyDrillsPage() {
           </Suspense>
         </main>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Drill</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this drill? This will permanently remove it and it will be removed from all practice plans. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              disabled={isDeleting}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                "Delete"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
