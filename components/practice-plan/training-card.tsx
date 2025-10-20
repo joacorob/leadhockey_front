@@ -5,6 +5,7 @@ interface PracticePlan {
   id: number
   title: string
   description?: string | null
+  thumbnailUrl?: string | null
   clubId?: number | null
   createdBy: number
   status: string
@@ -47,8 +48,14 @@ export function TrainingCard({ plan }: TrainingCardProps) {
     return `${minutes.toString().padStart(2, '0')}:00`
   }
 
-  // Get thumbnail from first item with thumbnail (support both "thumbnail" and "thumbnailUrl" fields)
+  // Get thumbnail: prioritize plan thumbnail, then first item thumbnail
   const getThumbnail = () => {
+    // First priority: plan's own thumbnail
+    if (plan.thumbnailUrl) {
+      return plan.thumbnailUrl
+    }
+
+    // Fallback: first item with thumbnail
     const firstItemWithThumb = plan.items.find(item => {
       const el = item.element as any
       return el?.thumbnail || el?.thumbnailUrl
@@ -56,10 +63,10 @@ export function TrainingCard({ plan }: TrainingCardProps) {
     
     if (firstItemWithThumb?.element) {
       const el = firstItemWithThumb.element as any
-      return el.thumbnail || el.thumbnailUrl || "/placeholder-logo.png"
+      return el.thumbnail || el.thumbnailUrl || "/placeholder.svg"
     }
     
-    return "/placeholder-logo.png"
+    return "/placeholder.svg"
   }
   
   const thumbnail = getThumbnail()
@@ -74,7 +81,7 @@ export function TrainingCard({ plan }: TrainingCardProps) {
             alt={plan.title}
             className="w-full h-full object-cover"
             onError={(e) => {
-              (e.target as HTMLImageElement).src = "/placeholder-logo.png"
+              (e.target as HTMLImageElement).src = "/placeholder.svg"
             }}
           />
           {/* Duration badge */}

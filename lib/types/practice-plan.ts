@@ -15,12 +15,21 @@ export interface PracticePlan {
   id: number
   title: string
   description?: string | null
+  thumbnailUrl?: string | null
   clubId?: number | null
   createdBy: number
   status: 'draft' | 'published' | 'deleted'
   createdAt: string
   updatedAt: string
   items: PracticePlanItem[]
+}
+
+export interface CreatePracticePlanPayload {
+  title: string
+  description?: string | null
+  thumbnail?: string | null  // Base64 string or URL
+  status?: 'draft' | 'published'
+  items?: Partial<PracticePlanItem>[]
 }
 
 // Generic responses

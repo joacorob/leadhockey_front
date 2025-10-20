@@ -8,7 +8,7 @@ interface TrainingContentProps {
 }
 
 export function TrainingContent({ item, planTitle }: TrainingContentProps) {
-  const thumbnail = item.thumbnail_url || "/placeholder-logo.png"
+  const thumbnail = item.thumbnail_url || "/placeholder.svg"
 
   const isVideo = item.itemType === "VIDEO_SESSION"
 
@@ -41,7 +41,7 @@ export function TrainingContent({ item, planTitle }: TrainingContentProps) {
               alt={item.title || "Training item"}
               className="w-full h-full object-contain"
               onError={(e) => {
-                (e.target as HTMLImageElement).src = "/placeholder-logo.png"
+                (e.target as HTMLImageElement).src = "/placeholder.svg"
               }}
             />
             {/* Play button overlay */}

@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { ItemSelectModal } from "@/components/practice-plan/item-select-modal"
+import { ImageDropzone } from "@/components/ui/image-dropzone"
 import { Trash2, ArrowUp, ArrowDown } from "lucide-react"
 
 // Step components placeholders (to be implemented in their own files later)
@@ -60,6 +61,15 @@ function MetadataStep({
               value={data.description ?? ""}
               onChange={(e) => onChange({ description: e.target.value })}
               rows={3}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Training thumbnail</label>
+            <ImageDropzone
+              onImageSelect={(base64) => onChange({ thumbnail: base64 } as any)}
+              onRemove={() => onChange({ thumbnail: null } as any)}
+              currentImage={(data as any).thumbnail}
+              maxSizeMB={5}
             />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -184,7 +194,19 @@ export default function CreateTrainingPage() {
   }
 
   const handleSave = async () => {
-    const payload = { ...planData, items }
+    // Build payload with thumbnail support
+    const payload: any = { 
+      title: planData.title,
+      description: planData.description,
+      status: planData.status || "draft",
+      items 
+    }
+    
+    // Include thumbnail if present (Base64 or null)
+    if ((planData as any).thumbnail !== undefined) {
+      payload.thumbnail = (planData as any).thumbnail
+    }
+    
     try {
       const res = await fetch("/api/practice-plans", {
         method: "POST",

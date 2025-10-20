@@ -45,10 +45,10 @@ export function TrainingItem({ item, index, isActive, expanded, onClick }: Train
           {/* Thumbnail */}
           <div className="w-28 h-20 flex-shrink-0 bg-gray-100 rounded overflow-hidden flex items-center justify-center shadow-sm">
             <img
-              src={item.thumbnail_url || "/placeholder-logo.png"}
+              src={item.thumbnail_url || "/placeholder.svg"}
               alt={item.title || "Thumbnail"}
               className="object-cover w-full h-full"
-              onError={(e) => ((e.target as HTMLImageElement).src = "/placeholder-logo.png")}
+              onError={(e) => ((e.target as HTMLImageElement).src = "/placeholder.svg")}
             />
           </div>
 

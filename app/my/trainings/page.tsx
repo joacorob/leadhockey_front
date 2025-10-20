@@ -4,56 +4,62 @@ import { useState, useEffect, useMemo } from "react"
 import { Suspense } from "react"
 import { Sidebar } from "@/components/layout/sidebar"
 import { Header } from "@/components/layout/header"
-import { VideoCard } from "@/components/ui/video-card"
+import { TrainingCard } from "@/components/practice-plan/training-card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Search } from "lucide-react"
 import Link from "next/link"
-import { WatchContent, mapContentItem } from "@/lib/types/watch"
 import { useApi } from "@/lib/hooks/use-api"
+
+interface PracticePlanSummary {
+  practicePlanId: number
+  title: string
+  description: string | null
+  thumbnailUrl: string | null
+  status: string
+  itemsCount: number
+  createdAt: string
+  updatedAt: string
+}
 
 interface ApiResponse {
   success: boolean
   data: {
-    items: any[]
-    page?: number
-    totalPages?: number
+    success: boolean
+    data: {
+      items: PracticePlanSummary[]
+      page: number
+      limit: number
+      totalItems: number
+      totalPages: number
+    }
   }
 }
 
 export default function MyTrainingsPage() {
   const [searchTerm, setSearchTerm] = useState("")
-  const [filteredTrainings, setFilteredTrainings] = useState<WatchContent[]>([])
+  const [filteredTrainings, setFilteredTrainings] = useState<any[]>([])
 
   const { data: trainingsResponse, loading: trainingsLoading } = useApi<ApiResponse>("/me/practice-sessions")
 
   const trainings = useMemo(() => {
-    // API returns nested structure: data.data.items
-    const raw = (trainingsResponse as any)?.data?.data?.items ?? []
+    // API response is double-nested: response.data.data.items
+    const items = trainingsResponse?.data?.data?.items ?? []
     
-    if (!Array.isArray(raw)) return []
+    if (!Array.isArray(items)) return []
     
-    // Group by practicePlanId to show unique training plans
-    const planMap = new Map<number, any>()
-    
-    raw.forEach((item: any) => {
-      const planId = item.practicePlanId
-      if (!planMap.has(planId)) {
-        // Use first video as thumbnail/preview for the plan
-        const videoData = item.video || {}
-        const mapped = mapContentItem(videoData, "PRACTICE_SESSION")
-        // Override with practice plan data
-        planMap.set(planId, {
-          ...mapped,
-          id: String(planId), // Use practicePlanId as ID for navigation
-          title: item.practicePlanTitle || mapped.title,
-          description: `Training plan with ${raw.filter((r: any) => r.practicePlanId === planId).length} exercises`,
-          created_at: item.updatedAt || mapped.created_at,
-        })
-      }
-    })
-    
-    return Array.from(planMap.values())
+    // Map to format expected by TrainingCard
+    return items.map((plan: PracticePlanSummary) => ({
+      id: plan.practicePlanId,
+      title: plan.title,
+      description: plan.description,
+      thumbnailUrl: plan.thumbnailUrl,
+      status: plan.status,
+      createdBy: 0, // Not provided in summary
+      createdAt: plan.createdAt,
+      updatedAt: plan.updatedAt,
+      items: [] // Empty array, we only have itemsCount
+    }))
   }, [trainingsResponse])
 
   useEffect(() => {
@@ -67,8 +73,7 @@ export default function MyTrainingsPage() {
       filtered = filtered.filter(
         (training) =>
           training.title.toLowerCase().includes(search.toLowerCase()) ||
-          training.description.toLowerCase().includes(search.toLowerCase()) ||
-          training.tags.some((tag: string) => tag.toLowerCase().includes(search.toLowerCase()))
+          (training.description && training.description.toLowerCase().includes(search.toLowerCase()))
       )
     }
 
@@ -150,7 +155,7 @@ export default function MyTrainingsPage() {
                   {filteredTrainings.length > 0 ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                       {filteredTrainings.map((training) => (
-                        <VideoCard key={training.id} video={training} />
+                        <TrainingCard key={training.id} plan={training} />
                       ))}
                     </div>
                   ) : (

@@ -16,6 +16,7 @@ interface PracticePlan {
   id: number
   title: string
   description?: string | null
+  thumbnailUrl?: string | null
   clubId?: number | null
   createdBy: number
   status: string
