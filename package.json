@@ -54,6 +54,7 @@
     "gif.js": "^0.2.0",
     "input-otp": "1.4.1",
     "jspdf": "^2.5.1",
+    "jspdf-autotable": "^5.0.2",
     "konva": "^10.0.2",
     "lucide-react": "^0.454.0",
     "m3u8-parser": "^7.2.0",

@@ -13,6 +13,8 @@ import { HTML5Backend } from "react-dnd-html5-backend"
 import { Card, CardContent } from "@/components/ui/card"
 import { AnimationDownloadDropdown } from "@/components/drill-builder/animation-download-dropdown"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Button } from "@/components/ui/button"
+import { Download } from "lucide-react"
 import { RelatedVideos } from "@/components/video/related-videos"
 import { useApi } from "@/lib/hooks/use-api"
 
@@ -22,9 +24,11 @@ export default function DrillDetailPage() {
   const [frames, setFrames] = useState<DrillFrame[] | null>(null)
   const [currentFrameIndex, setCurrentFrameIndex] = useState(0)
   const stageRef = useRef<any>(null)
+  const pdfStageRef = useRef<any>(null)
   const [drill, setDrill] = useState<any>(null)
   const [animationVideoStatus, setAnimationVideoStatus] = useState<"pending" | "success" | "error" | null>(null)
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const [isDownloadingPdf, setDownloadingPdf] = useState(false)
 
   const { data: playlistResponse } = useApi(`/playlists/${id}`)
 
@@ -138,6 +142,118 @@ export default function DrillDetailPage() {
     url: pdf.url ?? pdf.link ?? pdf.path ?? "",
   }))
 
+  const downloadPdf = async () => {
+    if (!frames || frames.length === 0 || !pdfStageRef.current) return
+    setDownloadingPdf(true)
+    try {
+      const { jsPDF } = await import("jspdf")
+      const doc = new jsPDF({ orientation: "portrait", unit: "px", format: [600, 900] })
+
+      const parseHtmlToText = (html: string) => {
+        if (!html) return ""
+        const parser = new DOMParser()
+        const parsed = parser.parseFromString(html, "text/html")
+        return parsed.body.textContent?.replace(/\s+/g, " ").trim() ?? ""
+      }
+      const descriptionText = parseHtmlToText(drillDataMemo.description)
+
+      await new Promise((res) => setTimeout(res, 150))
+      const frameImage = pdfStageRef.current.toDataURL({ pixelRatio: 2 })
+
+      // Background & header
+      doc.setFillColor(248, 250, 252)
+      doc.rect(0, 0, 600, 900, "F")
+
+      doc.setFillColor(30, 64, 175)
+      doc.rect(0, 0, 600, 170, "F")
+
+      doc.setFillColor(59, 130, 246)
+      doc.rect(0, 170, 600, 24, "F")
+
+      // Header with logo and title
+      const logoUrl = "https://uploadthingy.s3.us-west-1.amazonaws.com/nzVf7cqEycpaU4k9WPUBYZ/LEAD_logo.png"
+      try {
+        const imageResponse = await fetch(logoUrl)
+        const blob = await imageResponse.blob()
+        const dataUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader()
+          reader.onloadend = () => resolve(reader.result as string)
+          reader.onerror = reject
+          reader.readAsDataURL(blob)
+        })
+        doc.addImage(dataUrl, "PNG", 40, 45, 120, 60)
+      } catch (logoError) {
+        console.error("Failed to load logo", logoError)
+      }
+
+      doc.setFont("helvetica", "bold")
+      doc.setFontSize(28)
+      doc.setTextColor(255, 255, 255)
+      doc.text(drillDataMemo.title, 190, 85)
+
+      doc.setFont("helvetica", "normal")
+      doc.setFontSize(13)
+      doc.setTextColor(226, 232, 240)
+      doc.text("Share this drill with your staff & team", 190, 113)
+
+      doc.setFillColor(148, 163, 184)
+      doc.roundedRect(190, 124, 180, 22, 11, 11, "F")
+      doc.setFont("helvetica", "bold")
+      doc.setFontSize(12)
+      doc.setTextColor(30, 41, 59)
+      doc.text("Powered by Lead Hockey", 200, 139)
+
+      if (frameImage) {
+        doc.setFillColor(255, 255, 255)
+        doc.roundedRect(40, 220, 520, 330, 18, 18, "F")
+        doc.setDrawColor(226, 232, 240)
+        doc.roundedRect(40, 220, 520, 330, 18, 18, "S")
+        const imageWidth = 500
+        const imageHeight = (imageWidth * 600) / 900
+        const imageX = 50
+        const imageY = 232
+        doc.addImage(frameImage, "PNG", imageX, imageY, imageWidth, imageHeight)
+      }
+
+      if (descriptionText) {
+        doc.setFillColor(255, 255, 255)
+        const lines = doc.splitTextToSize(descriptionText, 480)
+        const textHeight = lines.length * 18 + 40
+        const boxHeight = Math.min(Math.max(textHeight, 120), 260)
+        const boxY = 570
+        doc.roundedRect(40, boxY, 520, boxHeight, 18, 18, "F")
+        doc.setDrawColor(209, 213, 219)
+        doc.roundedRect(40, boxY, 520, boxHeight, 18, 18, "S")
+        doc.setFont("helvetica", "bold")
+        doc.setFontSize(17)
+        doc.setTextColor(17, 24, 39)
+        doc.text("Drill Description", 60, boxY + 36)
+        doc.setFont("helvetica", "normal")
+        doc.setFontSize(14)
+        doc.setTextColor(55, 65, 81)
+        doc.text(lines, 60, boxY + 64)
+      }
+
+      doc.setFont("helvetica", "normal")
+      doc.setFontSize(10)
+      doc.setTextColor(107, 114, 128)
+      doc.text("Lead Hockey", 40, 840)
+      doc.text(new Date().toLocaleDateString(), 560, 840, { align: "right" })
+
+      doc.setFont("helvetica", "bold")
+      doc.setFontSize(12)
+      doc.setTextColor(30, 41, 59)
+      doc.text("www.leadhockey.com", 40, 858)
+      doc.text("Inspire. Teach. Elevate.", 560, 858, { align: "right" })
+
+      doc.save(`${drillDataMemo.title.replace(/\s+/g, "-").toLowerCase()}-drill.pdf`)
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message || "Failed to download PDF" })
+    } finally {
+      setDownloadingPdf(false)
+    }
+  }
+
   return (
     <DndProvider backend={HTML5Backend}>
       <div className="flex h-screen bg-gray-50">
@@ -154,6 +270,7 @@ export default function DrillDetailPage() {
                     <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                       <div>
                         <h1 className="text-2xl font-bold text-gray-900">{drillDataMemo.title}</h1>
+                        <p className="mt-1 text-sm text-gray-600">Download the animation, frames PDF, and other resources for this drill.</p>
                       </div>
                       <div className="flex items-center gap-2">
                         
@@ -163,6 +280,24 @@ export default function DrillDetailPage() {
                           animationVideoStatus={drillDataMemo.animationVideoStatus}
                           drillTitle={drillDataMemo.title}
                         />
+                        {frames && frames.length > 0 && (
+                          <Button onClick={downloadPdf} size="sm" variant="outline" disabled={isDownloadingPdf}>
+                            {isDownloadingPdf ? (
+                              <span className="flex items-center gap-2">
+                                <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24">
+                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                                </svg>
+                                Generating PDF…
+                              </span>
+                            ) : (
+                              <span className="flex items-center gap-2">
+                                <Download className="w-4 h-4" />
+                                Download PDF
+                              </span>
+                            )}
+                          </Button>
+                        )}
                       </div>
                     </div>
 
@@ -267,6 +402,25 @@ export default function DrillDetailPage() {
               </div>
             </div>
           </main>
+          {frames && (
+            <div
+              aria-hidden
+              className="pointer-events-none"
+              style={{ position: "absolute", left: "-10000px", top: "-10000px" }}
+            >
+              <DrillStage
+                ref={pdfStageRef}
+                elements={frames[0]?.elements ?? []}
+                selectedElements={[]}
+                onAddElement={() => {}}
+                onUpdateElement={() => {}}
+                onRemoveElement={() => {}}
+                onSelectionChange={() => {}}
+                onMoveSelected={() => {}}
+                interactive={false}
+              />
+            </div>
+          )}
         </div>
       </div>
     </DndProvider>
