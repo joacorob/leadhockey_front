@@ -1,7 +1,8 @@
 "use client"
 
 import Link from "next/link"
-import { User, Clock, MoreVertical, Copy, Trash2 } from "lucide-react"
+import { User, Clock, MoreVertical, Copy, Trash2, Edit } from "lucide-react"
+import { useRouter } from "next/navigation"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,9 +40,12 @@ interface TrainingCardProps {
   plan: PracticePlan
   onClone?: (id: number) => void
   onDelete?: (id: number) => void
+  onEdit?: (id: number) => void
 }
 
-export function TrainingCard({ plan, onClone, onDelete }: TrainingCardProps) {
+export function TrainingCard({ plan, onClone, onDelete, onEdit }: TrainingCardProps) {
+  const router = useRouter()
+  
   // Calculate total duration from items
   const totalDuration = plan.items.reduce((acc, item) => {
     const duration = item.element?.duration || 0
@@ -81,6 +85,16 @@ export function TrainingCard({ plan, onClone, onDelete }: TrainingCardProps) {
   }
   
   const thumbnail = getThumbnail()
+
+  const handleEdit = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (onEdit) {
+      onEdit(plan.id)
+    } else {
+      router.push(`/train/${plan.id}/edit`)
+    }
+  }
 
   const handleClone = (e: React.MouseEvent) => {
     e.preventDefault()
@@ -130,7 +144,7 @@ export function TrainingCard({ plan, onClone, onDelete }: TrainingCardProps) {
       </Link>
 
       {/* Actions menu */}
-      {(onClone || onDelete) && (
+      {(onClone || onDelete || onEdit) && (
         <div className="absolute top-2 right-2 z-10">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -147,6 +161,10 @@ export function TrainingCard({ plan, onClone, onDelete }: TrainingCardProps) {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={handleEdit}>
+                <Edit className="mr-2 h-4 w-4" />
+                Edit
+              </DropdownMenuItem>
               {onClone && (
                 <DropdownMenuItem onClick={handleClone}>
                   <Copy className="mr-2 h-4 w-4" />

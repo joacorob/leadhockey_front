@@ -21,6 +21,32 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   }
 }
 
+export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+  try {
+    const session = await getServerSession(authOptions)
+    const accessToken: string | undefined = (session as any)?.accessToken
+
+    const body = await request.text()
+    const backendUrl = `${process.env.LEAD_BACKEND}/api/v1/drills/${params.id}`
+
+    const externalResponse = await fetch(backendUrl, {
+      method: "PUT",
+      headers: {
+        accept: "application/json",
+        "Content-Type": "application/json",
+        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+      },
+      body,
+    })
+
+    const data = await externalResponse.json()
+    return NextResponse.json(data, { status: externalResponse.status })
+  } catch (e) {
+    console.error("drills proxy PUT error", e)
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+  }
+}
+
 export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const session = await getServerSession(authOptions)

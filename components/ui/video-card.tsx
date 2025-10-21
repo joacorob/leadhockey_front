@@ -1,7 +1,7 @@
 "use client"
 
 import Image from "next/image"
-import { Play, User, Clock, MoreVertical, Trash2 } from 'lucide-react'
+import { Play, User, Clock, MoreVertical, Trash2, Edit } from 'lucide-react'
 import { Badge } from "@/components/ui/badge"
 import { useRouter } from "next/navigation"
 import { formatTimeRemaining } from "@/lib/types/continue-watching"
@@ -23,9 +23,10 @@ interface VideoCardProps {
   }
   onClick?: () => void
   onDelete?: (id: number) => void
+  onEdit?: (id: number) => void
 }
 
-export function VideoCard({ video, onClick, onDelete }: VideoCardProps) {
+export function VideoCard({ video, onClick, onDelete, onEdit }: VideoCardProps) {
   const router = useRouter()
 
   const handleClick = () => {
@@ -40,6 +41,21 @@ export function VideoCard({ video, onClick, onDelete }: VideoCardProps) {
       router.push(`/train/${video.id}`)
     } else {
       router.push(`/video/${video.id}`)
+    }
+  }
+
+  const handleEdit = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (onEdit) {
+      onEdit(video.id)
+    } else {
+      // Default navigation to edit page
+      if (video.contentType === "DRILL") {
+        router.push(`/drills/${video.id}/edit`)
+      } else if (video.contentType === "PRACTICE_SESSION") {
+        router.push(`/train/${video.id}/edit`)
+      }
     }
   }
 
@@ -100,7 +116,7 @@ export function VideoCard({ video, onClick, onDelete }: VideoCardProps) {
         )}
 
         {/* Actions menu */}
-        {onDelete && (
+        {(onDelete || onEdit || video.contentType === "DRILL" || video.contentType === "PRACTICE_SESSION") && (
           <div className="absolute top-2 right-2 z-10">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -117,10 +133,18 @@ export function VideoCard({ video, onClick, onDelete }: VideoCardProps) {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={handleDelete} className="text-red-600">
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Delete
-                </DropdownMenuItem>
+                {(onEdit || video.contentType === "DRILL" || video.contentType === "PRACTICE_SESSION") && (
+                  <DropdownMenuItem onClick={handleEdit}>
+                    <Edit className="mr-2 h-4 w-4" />
+                    Edit
+                  </DropdownMenuItem>
+                )}
+                {onDelete && (
+                  <DropdownMenuItem onClick={handleDelete} className="text-red-600">
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete
+                  </DropdownMenuItem>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
