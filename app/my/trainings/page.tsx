@@ -244,6 +244,19 @@ export default function MyTrainingsPage() {
                     </div>
                   ))}
                 </div>
+              ) : !trainingsResponse ? (
+                /* Still loading initial data */
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  {Array.from({ length: 8 }).map((_, i) => (
+                    <div key={i} className="bg-white rounded-lg overflow-hidden shadow-sm">
+                      <div className="aspect-video bg-gray-200 animate-pulse" />
+                      <div className="p-4 space-y-2">
+                        <div className="w-3/4 h-4 bg-gray-200 rounded animate-pulse" />
+                        <div className="w-1/2 h-3 bg-gray-200 rounded animate-pulse" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
               ) : (
                 <>
                   {/* Results count */}
@@ -264,7 +277,7 @@ export default function MyTrainingsPage() {
                       ))}
                     </div>
                   ) : (
-                    /* Empty state */
+                    /* Empty state - only show when we're sure there are no trainings */
                     <div className="text-center py-12">
                       <div className="mb-4">
                         <svg
