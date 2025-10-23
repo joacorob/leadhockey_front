@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { User, Clock, MoreVertical, Copy, Trash2, Edit } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
 import { useRouter } from "next/navigation"
 import {
   DropdownMenu,
@@ -61,6 +62,34 @@ export function TrainingCard({ plan, onClone, onDelete, onEdit }: TrainingCardPr
       return `${hours * 60 + minutes}:00`
     }
     return `${minutes.toString().padStart(2, '0')}:00`
+  }
+
+  // Get status badge variant
+  const getStatusBadgeVariant = (status: string) => {
+    switch (status) {
+      case 'published':
+        return 'default'
+      case 'draft':
+        return 'secondary'
+      case 'deleted':
+        return 'destructive'
+      default:
+        return 'outline'
+    }
+  }
+
+  // Get status display text
+  const getStatusDisplayText = (status: string) => {
+    switch (status) {
+      case 'published':
+        return 'Published'
+      case 'draft':
+        return 'Draft'
+      case 'deleted':
+        return 'Deleted'
+      default:
+        return 'Unknown'
+    }
   }
 
   // Get thumbnail: prioritize plan thumbnail, then first item thumbnail
@@ -131,9 +160,14 @@ export function TrainingCard({ plan, onClone, onDelete, onEdit }: TrainingCardPr
 
         {/* Content */}
         <div className="p-4">
-          <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2 group-hover:text-blue-600 transition-colors">
-            {plan.title}
-          </h3>
+          <div className="flex items-start justify-between mb-2">
+            <h3 className="font-semibold text-gray-900 line-clamp-2 group-hover:text-blue-600 transition-colors flex-1 mr-2">
+              {plan.title}
+            </h3>
+            <Badge variant={getStatusBadgeVariant(plan.status)} className="shrink-0">
+              {getStatusDisplayText(plan.status)}
+            </Badge>
+          </div>
           
           {/* Creator info */}
           <div className="flex items-center text-sm text-gray-600">

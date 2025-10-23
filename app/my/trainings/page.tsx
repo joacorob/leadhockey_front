@@ -8,6 +8,13 @@ import { TrainingCard } from "@/components/practice-plan/training-card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Search, Loader2 } from "lucide-react"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import Link from "next/link"
 import { useApi } from "@/lib/hooks/use-api"
 import { useToast } from "@/hooks/use-toast"
@@ -50,6 +57,7 @@ interface ApiResponse {
 
 export default function MyTrainingsPage() {
   const [searchTerm, setSearchTerm] = useState("")
+  const [statusFilter, setStatusFilter] = useState<string>("all")
   const [filteredTrainings, setFilteredTrainings] = useState<any[]>([])
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [selectedPlanId, setSelectedPlanId] = useState<number | null>(null)
@@ -57,7 +65,7 @@ export default function MyTrainingsPage() {
   const [isCloning, setIsCloning] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
 
-  const { data: trainingsResponse, loading: trainingsLoading } = useApi<ApiResponse>(`/me/practice-sessions?refresh=${refreshKey}`)
+  const { data: trainingsResponse, loading: trainingsLoading } = useApi<ApiResponse>(`/me/practice-sessions?refresh=${refreshKey}&status=${statusFilter}`)
   const { toast } = useToast()
   const router = useRouter()
 
@@ -83,7 +91,7 @@ export default function MyTrainingsPage() {
 
   useEffect(() => {
     filterTrainings(searchTerm)
-  }, [trainings, searchTerm])
+  }, [trainings, searchTerm, statusFilter])
 
   const filterTrainings = (search: string) => {
     let filtered = trainings
@@ -218,7 +226,7 @@ export default function MyTrainingsPage() {
               <div className="mb-6">
                 <h1 className="text-2xl font-bold text-gray-900 mb-6">My Trainings</h1>
 
-                {/* Search */}
+                {/* Search and Filters */}
                 <div className="flex flex-col sm:flex-row gap-4 mb-6">
                   <div className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -228,6 +236,19 @@ export default function MyTrainingsPage() {
                       onChange={(e) => handleSearch(e.target.value)}
                       className="pl-10"
                     />
+                  </div>
+                  <div className="w-full sm:w-48">
+                    <Select value={statusFilter} onValueChange={setStatusFilter}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Filter by status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Status</SelectItem>
+                        <SelectItem value="published">Published</SelectItem>
+                        <SelectItem value="draft">Draft</SelectItem>
+                        <SelectItem value="deleted">Deleted</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
               </div>

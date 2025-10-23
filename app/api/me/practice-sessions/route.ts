@@ -12,7 +12,19 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url)
     const externalUrl = new URL(`${process.env.LEAD_BACKEND}/api/v1/me/practice-session`)
-    searchParams.forEach((v, k) => externalUrl.searchParams.append(k, v))
+    
+    // Handle status parameter specifically
+    const status = searchParams.get('status')
+    if (status) {
+      externalUrl.searchParams.append('status', status)
+    }
+    
+    // Copy other parameters
+    searchParams.forEach((v, k) => {
+      if (k !== 'status') {
+        externalUrl.searchParams.append(k, v)
+      }
+    })
 
     const externalResponse = await fetch(externalUrl.toString(), {
       headers: {
