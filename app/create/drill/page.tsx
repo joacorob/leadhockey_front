@@ -84,6 +84,7 @@ export default function BuildDrillPage() {
     ageGroup: "Age group",
     level: "All levels",
     players: "Available players",
+    filterOptionIds: [] as Array<number | string>,
   })
 
   const router = useRouter()
@@ -149,6 +150,8 @@ export default function BuildDrillPage() {
         description: drillData.description || undefined,
         thumbnail: thumbnailBase64, // backend will decode PNG
         animation_gif: animationGifBase64, // backend will decode GIF
+        categoryId: process.env.NEXT_PUBLIC_DRILL_CATEGORY_ID || "2", // Required for filter validation
+        filterOptionIds: drillData.filterOptionIds || [], // Send selected filter option IDs
         frames: frames.map((f, idx) => ({
           order_index: idx,
           elements: f.elements.map((el) => ({

@@ -1,18 +1,25 @@
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Calendar } from 'lucide-react'
 import dynamic from "next/dynamic"
 import 'react-quill/dist/quill.snow.css'
+import { useMemo, useState, useEffect, useRef } from "react"
+import { useApi } from "@/lib/hooks/use-api"
+import type { Filter } from "@/lib/types/api"
 
 interface DrillFormProps {
   data: {
     title: string
     date: string
     coach: string
+    // Deprecated legacy fields kept for backward-compat state shape
     gameplay: string
     ageGroup: string
     level: string
     players: string
+    // New dynamic filters payload
+    filterOptionIds?: Array<number | string>
     description: string
   }
   onChange: (data: any) => void
@@ -24,6 +31,81 @@ export function DrillForm({ data, onChange }: DrillFormProps) {
   const updateField = (field: string, value: string) => {
     onChange({ ...data, [field]: value })
   }
+
+  // Load dynamic filters by default drill category (same logic as watch)
+  const DEFAULT_DRILL_CATEGORY_ID = process.env.NEXT_PUBLIC_DEFAULT_DRILL_CATEGORY_ID || "2"
+  const { data: filtersResponse, loading: filtersLoading, error: filtersError } = useApi<{ success: boolean; data: any }>(
+    "/filters",
+    { categoryId: DEFAULT_DRILL_CATEGORY_ID },
+  )
+
+  const filters: Filter[] = useMemo(() => {
+    if (!filtersResponse) return []
+    const list = Array.isArray((filtersResponse as any).data?.data)
+      ? (filtersResponse as any).data.data
+      : Array.isArray((filtersResponse as any).data)
+      ? (filtersResponse as any).data
+      : []
+    return list as Filter[]
+  }, [filtersResponse])
+
+  // Track selections per filter.code; store option ids to align with backend expectation
+  const [activeSelections, setActiveSelections] = useState<Record<string, string | string[] | number | null>>({})
+  const hasInitialized = useRef(false)
+
+  // Initialize activeSelections from existing filterOptionIds when filters load (only once)
+  useEffect(() => {
+    if (!filters.length || !data.filterOptionIds?.length || hasInitialized.current) return
+    
+    const initialSelections: Record<string, string | string[] | number | null> = {}
+    
+    filters.forEach((filter) => {
+      const existingIds = data.filterOptionIds || []
+      
+      if (filter.ui_type === "select") {
+        // Find the option that matches an existing ID
+        const matchingOption = filter.options.find(opt => existingIds.includes(String(opt.id)))
+        if (matchingOption) {
+          initialSelections[filter.code] = String(matchingOption.id)
+        }
+      } else if (filter.ui_type === "checkbox") {
+        // Find all options that match existing IDs
+        const matchingIds = filter.options
+          .filter(opt => existingIds.includes(String(opt.id)))
+          .map(opt => String(opt.id))
+        if (matchingIds.length > 0) {
+          initialSelections[filter.code] = matchingIds
+        }
+      }
+      // Note: number inputs don't map to predefined option IDs, so we skip them
+    })
+    
+    setActiveSelections(initialSelections)
+    hasInitialized.current = true
+  }, [filters, data.filterOptionIds])
+
+  useEffect(() => {
+    // Skip if we haven't initialized yet to avoid infinite loop
+    if (!hasInitialized.current) return
+    
+    // Whenever active selections change, compute filterOptionIds and propagate to parent state
+    const optionIds: Array<number | string> = []
+    filters.forEach((f) => {
+      const val = activeSelections[f.code]
+      if (val === undefined || val === null || val === "") return
+      if (f.ui_type === "checkbox") {
+        if (Array.isArray(val)) {
+          val.forEach((id) => optionIds.push(id))
+        }
+      } else if (f.ui_type === "select") {
+        optionIds.push(val as any)
+      } else if (f.ui_type === "number") {
+        // number inputs typically don't map to predefined option IDs; skip adding to filterOptionIds
+      }
+    })
+    onChange({ ...data, filterOptionIds: optionIds })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeSelections, filters])
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6 items-start">
@@ -50,52 +132,75 @@ export function DrillForm({ data, onChange }: DrillFormProps) {
           </div>
         </div>
 
-        {/* Dropdowns */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {/* Gameplay */}
-          <Select value={data.gameplay} onValueChange={(v)=>updateField('gameplay',v)}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Gameplay">Gameplay</SelectItem>
-              <SelectItem value="Passing">Passing</SelectItem>
-              <SelectItem value="Shooting">Shooting</SelectItem>
-              <SelectItem value="Defense">Defense</SelectItem>
-            </SelectContent>
-          </Select>
+        {/* Dynamic Filters (always visible) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filtersLoading && (
+            <div className="col-span-full text-sm text-gray-500">Loading filters…</div>
+          )}
+          {filtersError && (
+            <div className="col-span-full text-sm text-red-600">Failed to load filters</div>
+          )}
+          {!filtersLoading && !filtersError && filters.map((filter) => (
+            <div key={filter.id} className="flex flex-col">
+              <label className="block text-sm font-medium text-gray-700 mb-1">{filter.label}</label>
+              {filter.ui_type === "select" && (
+                <Select
+                  value={(activeSelections[filter.code] as string) || ""}
+                  onValueChange={(val) =>
+                    setActiveSelections((prev) => ({ ...prev, [filter.code]: val }))
+                  }
+                >
+                  <SelectTrigger><SelectValue placeholder={`Select ${filter.label}`} /></SelectTrigger>
+                  <SelectContent>
+                    {filter.options.map((opt) => (
+                      <SelectItem key={opt.id} value={String(opt.id)}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
 
-          {/* AgeGroup */}
-          <Select value={data.ageGroup} onValueChange={(v)=>updateField('ageGroup',v)}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Age group">Age group</SelectItem>
-              <SelectItem value="U12">Under 12</SelectItem>
-              <SelectItem value="U16">Under 16</SelectItem>
-              <SelectItem value="U18">Under 18</SelectItem>
-              <SelectItem value="Adult">Adult</SelectItem>
-            </SelectContent>
-          </Select>
+              {filter.ui_type === "checkbox" && (
+                <div className="flex flex-wrap gap-2">
+                  {filter.options.map((opt) => {
+                    const current = activeSelections[filter.code]
+                    const checked = Array.isArray(current) && (current as any[]).includes(String(opt.id))
+                    return (
+                      <label key={opt.id} className="flex items-center gap-1 text-sm">
+                        <Checkbox
+                          checked={checked}
+                          onCheckedChange={(c) =>
+                            setActiveSelections((prev) => {
+                              const raw = Array.isArray(prev[filter.code]) ? ([...prev[filter.code] as any[]]) : []
+                              if (c) {
+                                if (!raw.includes(String(opt.id))) raw.push(String(opt.id))
+                              } else {
+                                const idx = raw.indexOf(String(opt.id))
+                                if (idx >= 0) raw.splice(idx, 1)
+                              }
+                              return { ...prev, [filter.code]: raw }
+                            })
+                          }
+                        />
+                        {opt.label}
+                      </label>
+                    )
+                  })}
+                </div>
+              )}
 
-          {/* Level */}
-          <Select value={data.level} onValueChange={(v)=>updateField('level',v)}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="All levels">All levels</SelectItem>
-              <SelectItem value="Beginner">Beginner</SelectItem>
-              <SelectItem value="Intermediate">Intermediate</SelectItem>
-              <SelectItem value="Advanced">Advanced</SelectItem>
-            </SelectContent>
-          </Select>
-
-          {/* Players */}
-          <Select value={data.players} onValueChange={(v)=>updateField('players',v)}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Available players">Available players</SelectItem>
-              <SelectItem value="1-5">1-5 players</SelectItem>
-              <SelectItem value="6-10">6-10 players</SelectItem>
-              <SelectItem value="11+">11+ players</SelectItem>
-            </SelectContent>
-          </Select>
+              {filter.ui_type === "number" && (
+                <Input
+                  type="number"
+                  value={(activeSelections[filter.code] as number | string | undefined) ?? ""}
+                  onChange={(e) =>
+                    setActiveSelections((prev) => ({ ...prev, [filter.code]: Number(e.target.value) }))
+                  }
+                />
+              )}
+            </div>
+          ))}
         </div>
       </div>
 

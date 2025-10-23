@@ -90,6 +90,7 @@ export default function EditDrillPage() {
     ageGroup: "Age group",
     level: "All levels",
     players: "Available players",
+    filterOptionIds: [] as Array<number | string>,
   })
 
   const router = useRouter()
@@ -115,6 +116,7 @@ export default function EditDrillPage() {
             ageGroup: drillObj.ageGroup || "Age group",
             level: drillObj.level || "All levels",
             players: drillObj.players || "Available players",
+            filterOptionIds: drillObj.filterOptionIds || [],
           })
 
           // Store existing URLs
@@ -251,6 +253,8 @@ export default function EditDrillPage() {
         title: drillData.title,
         description: drillData.description || undefined,
         thumbnailBase64: thumbnailBase64, // backend expects this field name per doc
+        categoryId: process.env.NEXT_PUBLIC_DEFAULT_DRILL_CATEGORY_ID || "2", // Required for filter validation
+        filterOptionIds: drillData.filterOptionIds || [], // Send selected filter option IDs
         frames: frames.map((f, idx) => ({
           order_index: idx + 1, // 1-based per doc
           elements: f.elements.map((el) => ({
@@ -288,7 +292,7 @@ export default function EditDrillPage() {
           title: "Drill updated successfully",
           description: canvasChanged ? "Animation regenerated" : "Animation unchanged"
         })
-        router.push(`/drills/${id}`)
+        // Removed automatic redirect - user can continue editing
       } else {
         toast({ title: "Error", description: data.error || "Failed to update drill", variant: "destructive" })
       }
