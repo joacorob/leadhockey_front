@@ -26,6 +26,7 @@ export function TrainingContent({ item, planTitle }: TrainingContentProps) {
       <div className="relative bg-gradient-to-br from-blue-900 to-blue-700 aspect-video">
         {isVideo ? (
           <VideoPlayer
+            key={`video-${item.itemId}-${item.itemType}`} // Force re-render when video changes
             videoUrl={(item as any).videoProcessedUrl || (item as any).videoUrl || ""}
             poster={thumbnail}
             fluid

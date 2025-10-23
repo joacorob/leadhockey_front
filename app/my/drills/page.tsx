@@ -7,9 +7,13 @@ import { Header } from "@/components/layout/header"
 import { VideoCard } from "@/components/ui/video-card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Search, Loader2 } from "lucide-react"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Badge } from "@/components/ui/badge"
+import { Search, Loader2, Filter as FilterIcon } from "lucide-react"
 import Link from "next/link"
 import { WatchContent, mapContentItem } from "@/lib/types/watch"
+import { Filter as VideoFilter } from "@/lib/types/api"
 import { useApi } from "@/lib/hooks/use-api"
 import { useToast } from "@/hooks/use-toast"
 import {
@@ -39,8 +43,29 @@ export default function MyDrillsPage() {
   const [selectedDrillId, setSelectedDrillId] = useState<number | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
+  
+  // Filter state
+  const [filters, setFilters] = useState<VideoFilter[]>([])
+  const [activeFilters, setActiveFilters] = useState<Record<string, any>>({})
+  const [showFilters, setShowFilters] = useState(false)
+  const [filterOptionIds, setFilterOptionIds] = useState<Array<number | string>>([])
 
-  const { data: drillsResponse, loading: drillsLoading } = useApi<ApiResponse>(`/me/drills?refresh=${refreshKey}`)
+  // Load filters for drill category
+  const DEFAULT_DRILL_CATEGORY_ID = process.env.NEXT_PUBLIC_DEFAULT_DRILL_CATEGORY_ID || "2"
+  const { data: filtersResponse, loading: filtersLoading } = useApi<{ success: boolean; data: any }>(
+    "/filters",
+    { categoryId: DEFAULT_DRILL_CATEGORY_ID },
+  )
+
+  // Build API params with filters
+  const apiParams = useMemo(() => {
+    const params: Record<string, any> = { refresh: refreshKey }
+    if (searchTerm) params.search = searchTerm
+    if (filterOptionIds.length > 0) params.filterOptionIds = filterOptionIds.join(',')
+    return params
+  }, [refreshKey, searchTerm, filterOptionIds])
+
+  const { data: drillsResponse, loading: drillsLoading } = useApi<ApiResponse>(`/me/drills`, apiParams)
   const { toast } = useToast()
 
   const drills = useMemo(() => {
@@ -49,27 +74,70 @@ export default function MyDrillsPage() {
     return Array.isArray(raw) ? raw.map((item: any) => mapContentItem(item, "DRILL")) : []
   }, [drillsResponse])
 
+  // Process filters from backend
   useEffect(() => {
-    filterDrills(searchTerm)
-  }, [drills, searchTerm])
-
-  const filterDrills = (search: string) => {
-    let filtered = drills
-
-    if (search) {
-      filtered = filtered.filter(
-        (drill) =>
-          drill.title.toLowerCase().includes(search.toLowerCase()) ||
-          drill.description.toLowerCase().includes(search.toLowerCase()) ||
-          drill.tags.some((tag: string) => tag.toLowerCase().includes(search.toLowerCase()))
-      )
+    if (filtersResponse && (filtersResponse as any).success) {
+      const list = Array.isArray((filtersResponse as any).data?.data)
+        ? (filtersResponse as any).data.data
+        : Array.isArray((filtersResponse as any).data)
+        ? (filtersResponse as any).data
+        : []
+      setFilters(list as VideoFilter[])
     }
+  }, [filtersResponse])
 
-    setFilteredDrills(filtered)
-  }
+  // Update filterOptionIds when activeFilters change
+  useEffect(() => {
+    const optionIds: Array<number | string> = []
+    filters.forEach((f) => {
+      const val = activeFilters[f.code]
+      if (val === undefined || val === null || val === "") return
+      if (f.ui_type === "checkbox") {
+        if (Array.isArray(val)) {
+          val.forEach((id) => optionIds.push(id))
+        }
+      } else if (f.ui_type === "select") {
+        optionIds.push(val as any)
+      }
+      // Note: number inputs typically don't map to predefined option IDs
+    })
+    setFilterOptionIds(optionIds)
+  }, [activeFilters, filters])
+
+  useEffect(() => {
+    // Since filters are now handled by the backend, just set the drills directly
+    setFilteredDrills(drills)
+  }, [drills])
 
   const handleSearch = (term: string) => {
     setSearchTerm(term)
+  }
+
+  const handleFilterChange = (code: string, value: any, checked?: boolean) => {
+    setActiveFilters((prev) => {
+      const current = prev[code]
+      const filterDef = filters.find((f) => f.code === code)
+
+      if (!filterDef) return prev
+
+      if (filterDef.ui_type === "checkbox") {
+        let arr = Array.isArray(current) ? [...current] : []
+        if (checked) {
+          arr.push(value)
+        } else {
+          arr = arr.filter((v: any) => v !== value)
+        }
+        return { ...prev, [code]: arr }
+      } else {
+        return { ...prev, [code]: value }
+      }
+    })
+  }
+
+  const clearAllFilters = () => {
+    setActiveFilters({})
+    setSearchTerm("")
+    setFilterOptionIds([])
   }
 
   const handleDeleteClick = (drillId: number) => {
@@ -145,7 +213,7 @@ export default function MyDrillsPage() {
               <div className="mb-6">
                 <h1 className="text-2xl font-bold text-gray-900 mb-6">My Drills</h1>
 
-                {/* Search */}
+                {/* Search and Filters */}
                 <div className="flex flex-col sm:flex-row gap-4 mb-6">
                   <div className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -156,7 +224,92 @@ export default function MyDrillsPage() {
                       className="pl-10"
                     />
                   </div>
+                  
+                  <button
+                    type="button"
+                    onClick={() => setShowFilters((prev) => !prev)}
+                    className="flex items-center justify-center w-10 h-10 border border-input rounded-md hover:bg-accent"
+                  >
+                    <FilterIcon className="w-4 h-4" />
+                  </button>
                 </div>
+
+                {/* Dynamic Filters from backend */}
+                {showFilters && (filtersLoading ? (
+                  <p className="text-sm text-gray-500 mb-4">Loading filters...</p>
+                ) : Array.isArray(filters) && filters.length > 0 ? (
+                  <div className="flex flex-wrap gap-4 mb-4">
+                    {filters.map((filter) => (
+                      <div key={filter.id} className="flex flex-col w-48 shrink-0">
+                        <label className="block text-sm font-medium mb-2">{filter.label}</label>
+                        {filter.ui_type === "select" && (
+                          <Select
+                            value={(activeFilters[filter.code] as string) || ""}
+                            onValueChange={(val) => handleFilterChange(filter.code, val)}
+                          >
+                            <SelectTrigger className="w-full">
+                              <SelectValue placeholder={`Select ${filter.label}`} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {filter.options.map((opt) => (
+                                <SelectItem key={opt.id} value={String(opt.id)}>
+                                  {opt.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+
+                        {filter.ui_type === "checkbox" && (
+                          <div className="flex flex-wrap gap-2">
+                            {filter.options.map((opt) => {
+                              const checked = Array.isArray(activeFilters[filter.code]) && (activeFilters[filter.code] as any[]).includes(opt.value)
+                              return (
+                                <label key={opt.id} className="flex items-center gap-1 text-sm">
+                                  <Checkbox
+                                    checked={checked}
+                                    onCheckedChange={(c) => handleFilterChange(filter.code, opt.value, c as boolean)}
+                                  />
+                                  {opt.label}
+                                </label>
+                              )
+                            })}
+                          </div>
+                        )}
+
+                        {filter.ui_type === "number" && (
+                          <Input
+                            type="number"
+                            value={(activeFilters[filter.code] as number | string | undefined) ?? ""}
+                            onChange={(e) => handleFilterChange(filter.code, Number(e.target.value))}
+                          />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : null)}
+
+                {/* Active filters */}
+                {showFilters && (
+                  <div className="flex items-center gap-2 mb-4">
+                    {searchTerm && (
+                      <Badge variant="secondary" className="flex items-center gap-1">
+                        Search: {searchTerm}
+                        <button onClick={() => handleSearch("")} className="ml-1 hover:bg-gray-200 rounded-full p-0.5">
+                          ×
+                        </button>
+                      </Badge>
+                    )}
+                    {Object.keys(activeFilters).length > 0 && (
+                      <Badge variant="secondary" className="flex items-center gap-1">
+                        Filters applied
+                        <button onClick={clearAllFilters} className="ml-1 hover:bg-gray-200 rounded-full p-0.5">
+                          ×
+                        </button>
+                      </Badge>
+                    )}
+                  </div>
+                )}
               </div>
 
               {drillsLoading ? (
