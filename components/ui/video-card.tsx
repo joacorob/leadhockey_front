@@ -81,7 +81,6 @@ export function VideoCard({ video, onClick, onDelete, onEdit }: VideoCardProps) 
           src={video.thumbnail || "/placeholder.svg?height=200&width=300"}
           alt={video.title}
           fill
-          className="object-cover"
         />
         
         {/* Play overlay */}
