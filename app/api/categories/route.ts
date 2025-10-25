@@ -7,9 +7,19 @@ export async function GET(request: NextRequest) {
     const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET })
     const accessToken: any = (token as any)?.accessToken
 
+    // Get query params
+    const { searchParams } = new URL(request.url)
+    const parentId = searchParams.get('parentId')
+
+    // Build URL with optional parentId parameter
+    let url = `${process.env.LEAD_BACKEND}/api/v1/categories`
+    if (parentId) {
+      url += `?parentId=${parentId}`
+    }
+
     // Try to fetch from external API first
     try {
-      const externalResponse = await fetch(`${process.env.LEAD_BACKEND}/api/v1/categories`, {
+      const externalResponse = await fetch(url, {
         headers: {
           accept: "application/json",
           Authorization: `Bearer ${accessToken}`,

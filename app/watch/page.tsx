@@ -79,6 +79,33 @@ export default function WatchPage() {
     return raw.map((category: any) => ({ ...category, id: String(category.id) }))
   }, [categoriesResponse])
 
+  // Fetch subcategories for the selected category
+  const subCategoriesParams = useMemo(() => {
+    if (!selectedCategoryId) {
+      return { __skip: true }
+    }
+    return { parentId: selectedCategoryId }
+  }, [selectedCategoryId])
+
+  const { data: subCategoriesResponse, loading: subCategoriesLoading } = useApi<ApiResponse<Category[]>>(
+    "/categories",
+    subCategoriesParams
+  )
+
+  const subCategories = useMemo<Category[]>(() => {
+    const raw = (subCategoriesResponse as any)?.data?.data?.items ?? []
+    if (!Array.isArray(raw)) return []
+    return raw.map((category: any) => ({ ...category, id: String(category.id) }))
+  }, [subCategoriesResponse])
+
+  // Categories to display: subcategories if available, otherwise main categories
+  const displayCategories = useMemo<Category[]>(() => {
+    if (subCategories.length > 0) {
+      return subCategories
+    }
+    return categories
+  }, [subCategories, categories])
+
   useEffect(() => {
     if (!categories.length) return
 
@@ -350,7 +377,7 @@ export default function WatchPage() {
 
                 <div className="mb-8">
                   <h2 className="text-lg font-semibold text-gray-800 mb-4">Browse by Category</h2>
-                  {categoriesLoading ? (
+                  {categoriesLoading || subCategoriesLoading ? (
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
                       {Array.from({ length: 6 }).map((_, i) => (
                         <div key={i} className="h-24 sm:h-28 bg-gray-200 rounded-lg animate-pulse" />
@@ -358,7 +385,7 @@ export default function WatchPage() {
                     </div>
                   ) : (
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-                      {categories.map((category) => {
+                      {displayCategories.map((category) => {
                         const isActive = selectedCategoryId === String(category.id)
                         return (
                           <div
