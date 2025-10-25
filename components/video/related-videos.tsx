@@ -3,32 +3,52 @@
 import { useRouter } from "next/navigation"
 import Image from "next/image"
 import { Play, User, Eye } from 'lucide-react'
+import { RelatedVideoItem } from "@/lib/types/related-videos"
 
 interface RelatedVideosProps {
-  playlistData: any
+  title?: string
+  source?: string
+  items: RelatedVideoItem[]
 }
 
-export function RelatedVideos({ playlistData  }: RelatedVideosProps) {
+export function RelatedVideos({ title, source, items }: RelatedVideosProps) {
   const router = useRouter()
-  const sessions = Array.isArray(playlistData?.sessions) ? playlistData.sessions : []
-  const relatedVideos = sessions.slice(0, 8)
+  const relatedVideos = items.slice(0, 6)
 
-  const handleVideoClick = (videoId: string) => {
-    router.push(`/video/${videoId}`)
+  const handleVideoClick = (video: RelatedVideoItem) => {
+    if (video.type === "DRILL") {
+      router.push(`/drills/${video.id}`)
+      return
+    }
+
+    router.push(`/video/${video.id}`)
+  }
+
+  // Generate clean English title based on source
+  const getDisplayTitle = () => {
+    if (source === "playlist") return title || "Related Content"
+    if (source === "subcategory") return "Similar Content"
+    if (source === "filters") return "You Might Also Like"
+    if (source === "parentCategory") return "Related Content"
+    return "Related Content"
   }
 
   return (
     <div className="bg-white rounded-lg p-6 shadow-sm">
-      <h2 className="text-xl font-semibold text-gray-900 mb-6">Related Videos</h2>
+      <div className="mb-6">
+        <h2 className="text-xl font-semibold text-gray-900">
+          {getDisplayTitle()}
+        </h2>
+      </div>
       
       <div className="space-y-4">
         {relatedVideos.length === 0 ? (
           <p className="text-sm text-gray-600">No related videos available right now.</p>
         ) : (
-          relatedVideos.map((video: any) => (
+          relatedVideos.map((video) => (
           <div
             key={video.id}
-            onClick={() => handleVideoClick(video.id)}
+            onClick={() => handleVideoClick(video)}
             className="group cursor-pointer flex space-x-3 p-2 rounded-lg hover:bg-gray-50 transition-colors"
           >
             {/* Thumbnail */}
@@ -61,12 +81,12 @@ export function RelatedVideos({ playlistData  }: RelatedVideosProps) {
               
               <div className="flex items-center text-xs text-gray-500 mb-1">
                 <User className="w-3 h-3 mr-1" />
-                <span className="truncate">{video.coach}</span>
+                <span className="truncate">{video.coach || "Lead Hockey"}</span>
               </div>
               
               <div className="flex items-center text-xs text-gray-500">
                 <Eye className="w-3 h-3 mr-1" />
-                <span>1.2K views</span>
+                <span>{video.type === "DRILL" ? "Drill" : "Video"}</span>
               </div>
             </div>
           </div>
@@ -80,7 +100,7 @@ export function RelatedVideos({ playlistData  }: RelatedVideosProps) {
           onClick={() => router.push('/explore')}
           className="text-blue-600 hover:text-blue-700 text-sm font-medium"
         >
-          View all videos →
+          View all content →
         </button>
       </div>
     </div>

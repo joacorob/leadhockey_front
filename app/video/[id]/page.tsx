@@ -12,6 +12,7 @@ import { VideoComments } from "@/components/video/video-comments"
 import { RelatedVideos } from "@/components/video/related-videos"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useApi } from "@/lib/hooks/use-api"
+import { mapRelatedItem, RelatedVideoItem } from "@/lib/types/related-videos"
 import { Button } from "@/components/ui/button"
 
 function VideoViewContent() {
@@ -27,8 +28,13 @@ function VideoViewContent() {
       ? rawVideoData
       : null
 
-  const { data: apiPlaylistResponse, loading: loadingPlaylist, error: errorPlaylist } = useApi(`/playlists/${videoId}`)
-  const playlistData = (apiPlaylistResponse as any)?.data ?? apiPlaylistResponse
+  const { data: apiRelatedResponse, loading: loadingRelated, error: errorRelated } = useApi(`/related-videos/${videoId}`, {
+    type: "VIDEO_SESSION",
+  })
+  const relatedData = (apiRelatedResponse as any)?.data ?? apiRelatedResponse
+  const relatedItems: RelatedVideoItem[] = Array.isArray(relatedData?.items)
+    ? relatedData.items.map((item: any) => mapRelatedItem(item, videoId)).filter(Boolean)
+    : []
 
   // Map API response to UI shape expected by VideoInfo component
   const mappedVideo = videoData && videoData.id
@@ -163,9 +169,13 @@ function VideoViewContent() {
               </div>
               
               {/* Desktop Sidebar */}
-              {mappedVideo && Array.isArray(playlistData?.sessions) && playlistData.sessions.length > 0 && (
+              {relatedItems.length > 0 && (
                 <div className="hidden lg:block w-80">
-                  <RelatedVideos playlistData={playlistData} />
+                  <RelatedVideos
+                    title={relatedData?.title}
+                    source={relatedData?.source}
+                    items={relatedItems}
+                  />
                 </div>
               )}
             </div>

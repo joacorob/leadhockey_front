@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button"
 import { Download } from "lucide-react"
 import { RelatedVideos } from "@/components/video/related-videos"
 import { useApi } from "@/lib/hooks/use-api"
+import { mapRelatedItem } from "@/lib/types/related-videos"
 
 export default function DrillDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -30,7 +31,13 @@ export default function DrillDetailPage() {
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const [isDownloadingPdf, setDownloadingPdf] = useState(false)
 
-  const { data: playlistResponse } = useApi(`/playlists/${id}`)
+  const { data: relatedResponse } = useApi(`/related-videos/${id}`, {
+    type: "DRILL",
+  })
+  const relatedData = (relatedResponse as any)?.data ?? relatedResponse
+  const relatedItems = Array.isArray(relatedData?.items)
+    ? relatedData.items.map((item: any) => mapRelatedItem(item, id)).filter(Boolean)
+    : []
 
   const drillDataMemo = useMemo(() => {
     const raw = drill
@@ -394,9 +401,13 @@ export default function DrillDetailPage() {
                   )}
                 </div>
 
-                {Array.isArray((playlistResponse as any)?.data?.sessions) && (playlistResponse as any).data?.sessions.length > 0 && (
+                {relatedItems.length > 0 && (
                   <aside className="hidden lg:block w-80">
-                    <RelatedVideos playlistData={playlistResponse?.data ?? {}} />
+                    <RelatedVideos
+                      title={relatedData?.title}
+                      source={relatedData?.source}
+                      items={relatedItems}
+                    />
                   </aside>
                 )}
               </div>
