@@ -552,7 +552,7 @@ export default function WatchPage() {
                   {displayItems.length > 0 ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                       {displayItems.map((item) => (
-                        <VideoCard key={`${item.contentType}-${item.id}`} video={item} />
+                        <VideoCard key={`${item.contentType}-${item.id}`} video={item} showActions={false} />
                       ))}
                     </div>
                   ) : (

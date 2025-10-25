@@ -24,9 +24,10 @@ interface VideoCardProps {
   onClick?: () => void
   onDelete?: (id: number) => void
   onEdit?: (id: number) => void
+  showActions?: boolean
 }
 
-export function VideoCard({ video, onClick, onDelete, onEdit }: VideoCardProps) {
+export function VideoCard({ video, onClick, onDelete, onEdit, showActions = true }: VideoCardProps) {
   const router = useRouter()
 
   const handleClick = () => {
@@ -69,6 +70,9 @@ export function VideoCard({ video, onClick, onDelete, onEdit }: VideoCardProps) 
   const timeRemaining = hasProgress && video.positionSec && video.durationSec
     ? video.durationSec - video.positionSec
     : 0
+
+  const shouldShowActions =
+    showActions && (onDelete || onEdit || video.contentType === "DRILL" || video.contentType === "PRACTICE_SESSION")
 
   return (
     <div 
@@ -115,7 +119,7 @@ export function VideoCard({ video, onClick, onDelete, onEdit }: VideoCardProps) 
         )}
 
         {/* Actions menu */}
-        {(onDelete || onEdit || video.contentType === "DRILL" || video.contentType === "PRACTICE_SESSION") && (
+        {shouldShowActions && (
           <div className="absolute top-2 right-2 z-10">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
