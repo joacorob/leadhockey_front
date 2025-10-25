@@ -3,16 +3,31 @@ import { apiClient } from '@/lib/api-client'
 import { PaginatedResponse } from '@/lib/types/api'
 
 // Basic API hook
-export function useApi<T>(endpoint: string, params?: Record<string, any>) {
+type ApiParams = Record<string, any> & { __skip?: boolean }
+
+export function useApi<T>(endpoint: string, params?: ApiParams) {
   const [data, setData] = useState<T | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   const fetchData = useCallback(async () => {
+    const shouldSkip = !!params?.__skip
+    if (shouldSkip) {
+      setLoading(false)
+      return
+    }
+
     try {
       setLoading(true)
       setError(null)
-      const result = await apiClient.get<T>(endpoint, params)
+      const sanitizedParams = params
+        ? Object.keys(params).reduce<Record<string, any>>((acc, key) => {
+            if (key === "__skip") return acc
+            acc[key] = params[key]
+            return acc
+          }, {})
+        : undefined
+      const result = await apiClient.get<T>(endpoint, sanitizedParams)
       setData(result)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred')

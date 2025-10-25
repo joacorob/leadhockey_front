@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Suspense } from "react"
+import { useState, useEffect, useMemo, useCallback, Suspense } from "react"
+import { useSearchParams } from "next/navigation"
 import { Sidebar } from "@/components/layout/sidebar"
 import { Header } from "@/components/layout/header"
 import { VideoCard } from "@/components/ui/video-card"
@@ -9,12 +9,11 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-import { useApi } from "@/lib/hooks/use-api"
-import { Search, Filter as FilterIcon } from "lucide-react"
-import { useSearchParams } from "next/navigation"
-import React from "react"
-import { Filter as VideoFilter } from "@/lib/types/api"
 import { Checkbox } from "@/components/ui/checkbox"
+import { PaginationComponent } from "@/components/ui/pagination"
+import { Search, Filter as FilterIcon } from "lucide-react"
+import { useApi } from "@/lib/hooks/use-api"
+import { Filter as VideoFilter } from "@/lib/types/api"
 import { WatchContent, mapContentItem } from "@/lib/types/watch"
 
 interface Category {
@@ -27,195 +26,292 @@ interface Category {
   image?: string
 }
 
-// Using WatchContent type from lib/types/watch.ts
-
 interface ApiResponse<T> {
   success: boolean
   data: T
 }
 
-export default function WatchPage() {
-  const [searchTerm, setSearchTerm] = useState("")
-  const [selectedCategory, setSelectedCategory] = useState("all")
-  const [filteredVideos, setFilteredVideos] = useState<WatchContent[]>([])
-  const [filters, setFilters] = useState<VideoFilter[]>([])
-  const [activeFilters, setActiveFilters] = useState<Record<string, any>>({})
-  const [showFilters, setShowFilters] = useState(false)
-
-  const searchParams = useSearchParams()
-  const categoryParam = searchParams.get("category") // id as string or null
-
-  const { data: categoriesResponse, loading: categoriesLoading } = useApi<ApiResponse<Category[]>>("/categories")
-  interface VideosApiResponse {
+interface WatchApiResponse {
+  success: boolean
+  data: {
     items: any[]
     page: number
+    limit: number
+    totalItems: number
     totalPages: number
   }
+}
 
-  const categories = React.useMemo(()=>{
-    const raw = (categoriesResponse as any)?.data?.data?.items ?? [];
-    // console.log("categoriesResponse", categoriesResponse)
-    return Array.isArray(raw) ? raw as Category[] : [];
-  }, [categoriesResponse]);
+const ITEMS_PER_PAGE = 20
 
-  // Resolve selected category ID (after categories are known)
-  const selectedCategoryId = React.useMemo(() => {
-    if (selectedCategory === "all") return undefined
-    const match = categories.find((c) => c.name === selectedCategory)
-    return match?.id
-  }, [selectedCategory, categories])
+function mapToContentType(type?: string) {
+  switch (type) {
+    case "DRILL":
+    case "DRILLS":
+    case "DRILL_SESSION":
+      return "DRILL" as const
+    case "PRACTICE_SESSION":
+    case "TRAINING_SESSION":
+      return "PRACTICE_SESSION" as const
+    default:
+      return "VIDEO" as const
+  }
+}
 
-  // Determine if we should fetch drills or videos based on category
-  const DEFAULT_DRILL_CATEGORY_ID = process.env.NEXT_PUBLIC_DEFAULT_DRILL_CATEGORY_ID || "2"
-  const isDrillCategory = selectedCategoryId === DEFAULT_DRILL_CATEGORY_ID
-  const contentEndpoint = isDrillCategory ? "/drills" : "/videos"
+export default function WatchPage() {
+  const searchParams = useSearchParams()
+  const categoryParam = searchParams.get("category")
 
-  const { data: videosResponse, loading: videosLoading } = useApi<VideosApiResponse>(contentEndpoint)
-  const {
-    data: filtersResponse,
-    loading: filtersLoading,
-    refetch: refetchFilters,
-  } = useApi<{ success: boolean; data: any }>(
-    "/filters",
-    selectedCategoryId ? { categoryId: selectedCategoryId } : undefined,
-  )
+  const [searchTerm, setSearchTerm] = useState("")
+  const [displayItems, setDisplayItems] = useState<WatchContent[]>([])
+  const [filters, setFilters] = useState<VideoFilter[]>([])
+  const [activeFilters, setActiveFilters] = useState<Record<string, string | string[]>>({})
+  const [filterOptionIds, setFilterOptionIds] = useState<string[]>([])
+  const [showFilters, setShowFilters] = useState(false)
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null)
+  const [page, setPage] = useState(1)
 
-  const videos = React.useMemo(()=>{
-    const raw = (videosResponse as any)?.data?.data?.items ?? [];
-    const contentType = isDrillCategory ? "DRILL" : "VIDEO"
-    return Array.isArray(raw) ? raw.map((item: any) => mapContentItem(item, contentType)) : [];
-  }, [videosResponse, isDrillCategory]);
+  const { data: categoriesResponse, loading: categoriesLoading } = useApi<ApiResponse<Category[]>>("/categories")
 
+  const categories = useMemo<Category[]>(() => {
+    const raw = (categoriesResponse as any)?.data?.data?.items ?? []
+    if (!Array.isArray(raw)) return []
+    return raw.map((category: any) => ({ ...category, id: String(category.id) }))
+  }, [categoriesResponse])
 
   useEffect(() => {
-    // When the URL query param changes, update the selected category accordingly
-    if (!categories.length) return // wait until categories are loaded
+    if (!categories.length) return
 
-    let categoryName = "all"
     if (categoryParam) {
-      const matched = categories.find((c) => c.id.toString() === categoryParam)
-      if (matched) {
-        categoryName = matched.name
+      const match = categories.find((category) => String(category.id) === String(categoryParam))
+      if (match) {
+        setSelectedCategoryId((prev) => (prev === String(match.id) ? prev : String(match.id)))
+        return
       }
     }
 
-    setSelectedCategory((prev) => {
-      if (prev === categoryName) return prev
-      return categoryName
-    })
-    // Re-apply filtering whenever the param or videos list changes
-    filterVideos(searchTerm, categoryName)
-    // Reset filters until new ones are fetched by useApi
-    if (categoryName !== "all") {
-      setFilters([])
-      setActiveFilters({})
-    } else {
-      setFilters([])
-      setActiveFilters({})
-    }
-  }, [categoryParam, categories, videos])
+    setSelectedCategoryId((prev) => prev ?? String(categories[0].id))
+  }, [categories, categoryParam])
 
-  // Update filters when response arrives
+  useEffect(() => {
+    setActiveFilters({})
+    setFilterOptionIds([])
+    setFilters([])
+    setSearchTerm("")
+    setPage(1)
+  }, [selectedCategoryId])
+
+  const filtersParams = useMemo(() => {
+    if (!selectedCategoryId) {
+      return { __skip: true }
+    }
+    return { categoryId: selectedCategoryId }
+  }, [selectedCategoryId])
+
+  const { data: filtersResponse, loading: filtersLoading } = useApi<{ success: boolean; data: any }>("/filters", filtersParams)
+
   useEffect(() => {
     if (filtersResponse && (filtersResponse as any).success) {
-      const list = Array.isArray((filtersResponse as any).data?.data)
-        ? (filtersResponse as any).data.data
-        : Array.isArray((filtersResponse as any).data)
-        ? (filtersResponse as any).data
+      const data = (filtersResponse as any).data
+      const list = Array.isArray(data?.data)
+        ? data.data
+        : Array.isArray(data)
+        ? data
         : []
       setFilters(list as VideoFilter[])
     }
   }, [filtersResponse])
 
+  useEffect(() => {
+    const optionIds: string[] = []
 
-  const handleSearch = (term: string) => {
-    setSearchTerm(term)
-    filterVideos(term, selectedCategory)
+    Object.values(activeFilters).forEach((value) => {
+      if (Array.isArray(value)) {
+        value.forEach((id) => {
+          if (id !== null && id !== undefined && id !== "") {
+            optionIds.push(String(id))
+          }
+        })
+      } else if (value !== null && value !== undefined && value !== "") {
+        optionIds.push(String(value))
+      }
+    })
+
+    const sorted = Array.from(new Set(optionIds)).sort()
+
+    setFilterOptionIds((prev) => {
+      if (prev.length === sorted.length && prev.every((id, index) => id === sorted[index])) {
+        return prev
+      }
+      return sorted
+    })
+  }, [activeFilters])
+
+  const watchParams = useMemo(() => {
+    if (!selectedCategoryId) {
+      return { __skip: true }
+    }
+
+    const params: Record<string, any> = {
+      categoryId: selectedCategoryId,
+      page,
+      limit: ITEMS_PER_PAGE,
+    }
+
+    if (filterOptionIds.length > 0) {
+      params.filterOptionIds = filterOptionIds.join(",")
+    }
+
+    if (searchTerm) {
+      params.search = searchTerm
+    }
+
+    return params
+  }, [selectedCategoryId, page, filterOptionIds, searchTerm])
+
+  const {
+    data: watchResponse,
+    loading: watchLoading,
+    error: watchError,
+    refetch: refetchWatch,
+  } = useApi<WatchApiResponse>("/watch", watchParams)
+
+  const watchData = useMemo(() => (watchResponse as any)?.data?.data ?? null, [watchResponse])
+
+  const rawItems = useMemo(() => (Array.isArray(watchData?.items) ? watchData.items : []), [watchData])
+
+  const mappedItems = useMemo(() => {
+    if (!Array.isArray(rawItems)) return []
+    return rawItems.map((item: any) => mapContentItem(item, mapToContentType(item?.type)))
+  }, [rawItems])
+
+  useEffect(() => {
+    setDisplayItems(mappedItems)
+  }, [mappedItems])
+
+  const selectedFilterChips = useMemo(() => {
+    const chips: Array<{ code: string; optionId: string; label: string }> = []
+
+    filters.forEach((filter) => {
+      const value = activeFilters[filter.code]
+      if (!value) return
+
+      const appendChip = (optionId: string) => {
+        const option = filter.options.find((opt) => String(opt.id) === String(optionId))
+        if (option) {
+          chips.push({ code: filter.code, optionId: String(option.id), label: `${filter.label}: ${option.label}` })
+        }
+      }
+
+      if (Array.isArray(value)) {
+        value.forEach((optionId) => appendChip(String(optionId)))
+      } else {
+        appendChip(String(value))
+      }
+    })
+
+    return chips
+  }, [filters, activeFilters])
+
+  const totalPages = watchData?.totalPages ?? 1
+  const totalItems = watchData?.totalItems ?? mappedItems.length
+  const hasNext = page < totalPages
+  const hasPrev = page > 1
+
+  const handleCategoryClick = (categoryId: string) => {
+    if (categoryId === selectedCategoryId) return
+    setSelectedCategoryId(categoryId)
   }
 
-  const handleCategoryChange = (category: string) => {
-    setSelectedCategory(category)
-    filterVideos(searchTerm, category)
-  }
+  const handleFilterChange = (code: string, optionId: string, checked?: boolean) => {
+    const id = String(optionId)
 
-  const handleCategoryClick = (categoryName: string) => {
-    setSelectedCategory(categoryName)
-    filterVideos(searchTerm, categoryName)
-  }
-
-  const handleFilterChange = (code: string, value: any, checked?: boolean) => {
     setActiveFilters((prev) => {
-      const current = prev[code]
-      const filterDef = filters.find((f) => f.code === code)
-
+      const filterDef = filters.find((filter) => filter.code === code)
       if (!filterDef) return prev
 
       if (filterDef.ui_type === "checkbox") {
-        let arr = Array.isArray(current) ? [...current] : []
+        const current = Array.isArray(prev[code]) ? [...prev[code]] : []
+        const exists = current.includes(id)
+
         if (checked) {
-          arr.push(value)
-        } else {
-          arr = arr.filter((v: any) => v !== value)
+          if (exists) return prev
+          return { ...prev, [code]: [...current, id] }
         }
-        return { ...prev, [code]: arr }
-      } else {
-        return { ...prev, [code]: value }
+
+        if (!exists) return prev
+        const next = current.filter((value) => value !== id)
+        if (next.length === 0) {
+          const { [code]: _removed, ...rest } = prev
+          return rest
+        }
+
+        return { ...prev, [code]: next }
       }
-    })
-  }
 
-  const filterVideos = (search: string, category: string, extraFilters: Record<string, any> = activeFilters) => {
-    let filtered = videos
-
-    if (search) {
-      filtered = filtered.filter(
-        (video) =>
-          video.title.toLowerCase().includes(search.toLowerCase()) ||
-          video.coach.toLowerCase().includes(search.toLowerCase()) ||
-          video.tags.some((tag: string) => tag.toLowerCase().includes(search.toLowerCase())),
-      )
-    }
-
-    if (category !== "all") {
-      const selectedCat = categories.find((cat) => cat.name === category)
-      if (selectedCat) {
-        filtered = filtered.filter((video) => video.category_id === selectedCat.id)
+      if (!id) {
+        if (prev[code] === undefined) return prev
+        const { [code]: _removed, ...rest } = prev
+        return rest
       }
-    }
 
-    // Apply dynamic backend filters
-    Object.entries(extraFilters).forEach(([code, val]) => {
-      if (!val || (Array.isArray(val) && val.length === 0)) return
-      if (Array.isArray(val)) {
-        filtered = filtered.filter((v) => val.includes((v as any)[code]))
-      } else {
-        filtered = filtered.filter((v) => (v as any)[code] === val)
-      }
+      if (prev[code] === id) return prev
+      return { ...prev, [code]: id }
     })
 
-    // Videos are already mapped by the useMemo above
-    setFilteredVideos(filtered)
+    setPage(1)
   }
 
-  // Re-filter when activeFilters changes
-  useEffect(() => {
-    filterVideos(searchTerm, selectedCategory, activeFilters)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeFilters])
+  const handleRemoveFilterChip = (code: string, optionId: string) => {
+    const id = String(optionId)
 
-  const handleVideoClick = (video: WatchContent) => {
-    console.log("Playing content:", video.title)
+    setActiveFilters((prev) => {
+      const current = prev[code]
+      if (!current) return prev
+
+      if (Array.isArray(current)) {
+        const next = current.filter((value) => value !== id)
+        if (next.length === 0) {
+          const { [code]: _removed, ...rest } = prev
+          return rest
+        }
+        return { ...prev, [code]: next }
+      }
+
+      if (current !== id) return prev
+      const { [code]: _removed, ...rest } = prev
+      return rest
+    })
+
+    setPage(1)
   }
 
-  const categoryOptions = ["all", ...(categories || []).map((cat) => cat.name)]
+  const handleClearFilters = () => {
+    setSearchTerm("")
+    setActiveFilters({})
+    setFilterOptionIds([])
+    setPage(1)
+  }
 
-  const categoryData = (categories || []).map((cat) => ({
-    name: cat.name,
-    image: cat.imageSrc || `/field-hockey-${cat.name.toLowerCase().replace(" ", "-")}.png`,
-    description: cat.description || `Master ${cat.name.toLowerCase()} techniques`,
-    color: cat.color,
-    icon: cat.icon,
-  }))
+  const handlePageChange = useCallback((newPage: number) => {
+    if (newPage === page) return
+    setPage(newPage)
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, behavior: "smooth" })
+    }
+  }, [page])
+
+  const handleNextPage = () => {
+    if (hasNext) {
+      handlePageChange(page + 1)
+    }
+  }
+
+  const handlePrevPage = () => {
+    if (hasPrev) {
+      handlePageChange(page - 1)
+    }
+  }
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -248,7 +344,6 @@ export default function WatchPage() {
             }
           >
             <div className="max-w-7xl mx-auto">
-              {/* Page header */}
               <div className="mb-6">
                 <h1 className="text-2xl font-bold text-gray-900 mb-6">Watch Content</h1>
 
@@ -262,42 +357,45 @@ export default function WatchPage() {
                     </div>
                   ) : (
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-                      {categoryData.map((category) => (
-                        <div
-                          key={category.name}
-                          onClick={() => handleCategoryClick(category.name)}
-                          className={`group cursor-pointer rounded-lg overflow-hidden transition-all duration-200 hover:shadow-lg hover:scale-105 ${
-                            selectedCategory === category.name ? "ring-2 ring-blue-500 shadow-lg" : "hover:shadow-md"
-                          }`}
-                        >
-                          <div className="relative">
-                            <img
-                              src={category.image || "/placeholder.svg"}
-                              alt={category.name}
-                              className="w-full h-24 sm:h-28 object-cover group-hover:brightness-110 transition-all duration-200"
-                            />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                            <div className="absolute bottom-0 left-0 right-0 p-2">
-                              <h3 className="text-white text-xs sm:text-sm font-semibold text-center leading-tight">
-                                {category.name}
-                              </h3>
+                      {categories.map((category) => {
+                        const isActive = selectedCategoryId === String(category.id)
+                        return (
+                          <div
+                            key={category.id}
+                            onClick={() => handleCategoryClick(String(category.id))}
+                            className={`group cursor-pointer rounded-lg overflow-hidden transition-all duration-200 hover:shadow-lg hover:scale-105 ${
+                              isActive ? "ring-2 ring-blue-500 shadow-lg" : "hover:shadow-md"
+                            }`}
+                          >
+                            <div className="relative">
+                              <img
+                                src={category.imageSrc || category.image || "/placeholder.svg"}
+                                alt={category.name}
+                                className="w-full h-24 sm:h-28 object-cover group-hover:brightness-110 transition-all duration-200"
+                              />
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                              <div className="absolute bottom-0 left-0 right-0 p-2">
+                                <h3 className="text-white text-xs sm:text-sm font-semibold text-center leading-tight">
+                                  {category.name}
+                                </h3>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      ))}
+                        )
+                      })}
                     </div>
                   )}
                 </div>
 
-                {/* Filters */}
                 <div className="flex flex-col sm:flex-row gap-4 mb-6">
                   <div className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                     <Input
                       placeholder="Search content, coaches, or tags..."
                       value={searchTerm}
-                      onChange={(e) => handleSearch(e.target.value)}
+                      onChange={(e) => setSearchTerm(e.target.value)}
                       className="pl-10"
+                      disabled={!selectedCategoryId}
                     />
                   </div>
 
@@ -305,85 +403,107 @@ export default function WatchPage() {
                     type="button"
                     onClick={() => setShowFilters((prev) => !prev)}
                     className="flex items-center justify-center w-10 h-10 border border-input rounded-md hover:bg-accent"
+                    disabled={!selectedCategoryId}
                   >
                     <FilterIcon className="w-4 h-4" />
                   </button>
                 </div>
 
-                {/* Dynamic Filters from backend */}
-                {showFilters && (filtersLoading ? (
-                  <p>Loading filters...</p>
-                ) : Array.isArray(filters) && filters.length > 0 ? (
-                  <div className="flex flex-wrap gap-4 mb-4">
-                    {filters.map((filter) => (
-                      <div key={filter.id} className="flex flex-col w-48 shrink-0">
-                        <label className="block text-sm font-medium mb-2">{filter.label}</label>
-                        {filter.ui_type === "select" && (
-                          <Select
-                            value={(activeFilters[filter.code] as string) || ""}
-                            onValueChange={(val) => handleFilterChange(filter.code, val)}
-                          >
-                            <SelectTrigger className="w-full">
-                              <SelectValue placeholder={`Select ${filter.label}`} />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {filter.options.map((opt) => (
-                                <SelectItem key={opt.id} value={String(opt.value)}>
-                                  {opt.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        )}
+                {showFilters && selectedCategoryId && (
+                  filtersLoading ? (
+                    <p className="text-sm text-gray-500 mb-4">Loading filters...</p>
+                  ) : filters.length > 0 ? (
+                    <div className="flex flex-wrap gap-4 mb-4">
+                      {filters.map((filter) => {
+                        const options = [...filter.options].sort((a, b) => a.ordering - b.ordering)
+                        return (
+                          <div key={filter.id} className="flex flex-col w-48 shrink-0">
+                            <label className="block text-sm font-medium mb-2">{filter.label}</label>
+                            {filter.ui_type === "select" && (
+                              <Select
+                                value={(activeFilters[filter.code] as string) || ""}
+                                onValueChange={(val) => handleFilterChange(filter.code, val)}
+                              >
+                                <SelectTrigger className="w-full">
+                                  <SelectValue placeholder={`Select ${filter.label}`} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="">All</SelectItem>
+                                  {options.map((opt) => (
+                                    <SelectItem key={opt.id} value={String(opt.id)}>
+                                      {opt.label}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            )}
 
-                        {filter.ui_type === "checkbox" && (
-                          <div className="flex flex-wrap gap-2">
-                            {filter.options.map((opt) => {
-                              const checked = Array.isArray(activeFilters[filter.code]) && (activeFilters[filter.code] as any[]).includes(opt.value)
-                              return (
-                                <label key={opt.id} className="flex items-center gap-1 text-sm">
-                                  <Checkbox
-                                    checked={checked}
-                                    onCheckedChange={(c) => handleFilterChange(filter.code, opt.value, c as boolean)}
-                                  />
-                                  {opt.label}
-                                </label>
-                              )
-                            })}
+                            {filter.ui_type === "checkbox" && (
+                              <div className="flex flex-wrap gap-2">
+                                {options.map((opt) => {
+                                  const optionId = String(opt.id)
+                                  const checked = Array.isArray(activeFilters[filter.code])
+                                    ? (activeFilters[filter.code] as string[]).includes(optionId)
+                                    : false
+                                  return (
+                                    <label key={opt.id} className="flex items-center gap-1 text-sm">
+                                      <Checkbox
+                                        checked={checked}
+                                        onCheckedChange={(checkedValue) =>
+                                          handleFilterChange(filter.code, optionId, Boolean(checkedValue))
+                                        }
+                                      />
+                                      {opt.label}
+                                    </label>
+                                  )
+                                })}
+                              </div>
+                            )}
                           </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                ) : null)}
+                        )
+                      })}
+                    </div>
+                  ) : null
+                )}
 
-                {/* Active filters */}
-                {showFilters && (
-                  <div className="flex items-center gap-2 mb-4">
-                  {searchTerm && (
-                    <Badge variant="secondary" className="flex items-center gap-1">
-                      Search: {searchTerm}
-                      <button onClick={() => handleSearch("")} className="ml-1 hover:bg-gray-200 rounded-full p-0.5">
-                        ×
-                      </button>
-                    </Badge>
-                  )}
-                  {selectedCategory !== "all" && (
-                    <Badge variant="secondary" className="flex items-center gap-1">
-                      Category: {selectedCategory}
-                      <button
-                        onClick={() => handleCategoryChange("all")}
-                        className="ml-1 hover:bg-gray-200 rounded-full p-0.5"
-                      >
-                        ×
-                      </button>
-                    </Badge>
-                  )}
+                {(searchTerm.trim().length > 0 || selectedFilterChips.length > 0) && (
+                  <div className="flex flex-wrap items-center gap-2 mb-4">
+                    {searchTerm.trim().length > 0 && (
+                      <Badge variant="secondary" className="flex items-center gap-1">
+                        Search: {searchTerm.trim()}
+                        <button
+                          onClick={() => setSearchTerm("")}
+                          className="ml-1 hover:bg-gray-200 rounded-full p-0.5"
+                        >
+                          ×
+                        </button>
+                      </Badge>
+                    )}
+                    {selectedFilterChips.map((chip) => (
+                      <Badge key={`${chip.code}-${chip.optionId}`} variant="secondary" className="flex items-center gap-1">
+                        {chip.label}
+                        <button
+                          onClick={() => handleRemoveFilterChip(chip.code, chip.optionId)}
+                          className="ml-1 hover:bg-gray-200 rounded-full p-0.5"
+                        >
+                          ×
+                        </button>
+                      </Badge>
+                    ))}
                   </div>
                 )}
               </div>
 
-              {videosLoading ? (
+              {watchError && (
+                <div className="mb-6 rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                  <p className="mb-2">Failed to load watch content. {watchError}</p>
+                  <Button variant="outline" size="sm" onClick={refetchWatch}>
+                    Try again
+                  </Button>
+                </div>
+              )}
+
+              {watchLoading ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                   {Array.from({ length: 8 }).map((_, i) => (
                     <div key={i} className="bg-white rounded-lg overflow-hidden shadow-sm">
@@ -397,31 +517,34 @@ export default function WatchPage() {
                 </div>
               ) : (
                 <>
-                  {/* Results count */}
                   <p className="text-sm text-gray-600 mb-4">
-                    Showing {filteredVideos.length} item{filteredVideos.length !== 1 ? "s" : ""}
+                    Showing {displayItems.length} item{displayItems.length !== 1 ? "s" : ""} (total {totalItems})
                   </p>
 
-                  {/* Video grid */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                    {filteredVideos.map((video) => (
-                      <VideoCard key={video.id} video={video} onClick={() => handleVideoClick(video)} />
-                    ))}
-                  </div>
-
-                  {/* Empty state */}
-                  {filteredVideos.length === 0 && !videosLoading && (
+                  {displayItems.length > 0 ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                      {displayItems.map((item) => (
+                        <VideoCard key={`${item.contentType}-${item.id}`} video={item} />
+                      ))}
+                    </div>
+                  ) : (
                     <div className="text-center py-12">
                       <p className="text-gray-500 mb-4">No content found matching your criteria</p>
-                      <Button
-                        onClick={() => {
-                          setSearchTerm("")
-                          setSelectedCategory("all")
-                          filterVideos("", "all")
-                        }}
-                      >
-                        Clear filters
-                      </Button>
+                      <Button onClick={handleClearFilters}>Reset search & filters</Button>
+                    </div>
+                  )}
+
+                  {totalPages > 1 && (
+                    <div className="mt-8 flex justify-center">
+                      <PaginationComponent
+                        currentPage={page}
+                        totalPages={totalPages}
+                        hasNext={hasNext}
+                        hasPrev={hasPrev}
+                        onPageChange={handlePageChange}
+                        onNext={handleNextPage}
+                        onPrev={handlePrevPage}
+                      />
                     </div>
                   )}
                 </>

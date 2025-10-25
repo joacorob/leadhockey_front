@@ -14,6 +14,8 @@ export interface WatchContent {
   contentType: ContentType
   views?: number
   likes?: number
+  club_id?: string | null
+  rawType?: string
 }
 
 /**
@@ -26,14 +28,16 @@ export function mapContentItem(raw: any, contentType: ContentType): WatchContent
     description: raw.description || "",
     thumbnail: raw.thumbnail || raw.thumbnail_url || "/placeholder.svg",
     duration: formatDuration(raw.duration),
-    coach: typeof raw.coach === "string" ? raw.coach : raw.coach?.name || "LEAD",
+    coach: resolveCoach(raw),
     category_id: String(raw.categoryId || raw.category_id || raw.category || ""),
     category: raw.category_name || raw.category || "Unknown",
     created_at: raw.created_at || raw.createdAt || raw.updatedAt || new Date().toISOString(),
-    tags: Array.isArray(raw.tags) ? raw.tags : [],
+    tags: normalizeTags(raw),
     contentType,
     views: raw.views || 0,
     likes: raw.likes || 0,
+    club_id: raw.clubId ?? raw.club_id ?? null,
+    rawType: raw.type || raw.contentType || undefined,
   }
 }
 
@@ -49,5 +53,39 @@ function formatDuration(duration: any): string {
     return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`
   }
   return "--:--"
+}
+
+function resolveCoach(raw: any): string {
+  const coach = raw.coach || raw.owner || raw.author
+  if (!coach) return "LEAD"
+
+  if (typeof coach === "string") {
+    return coach
+  }
+
+  if (typeof coach === "object" && coach !== null) {
+    return coach.name || coach.fullName || coach.displayName || "LEAD"
+  }
+
+  return "LEAD"
+}
+
+function normalizeTags(raw: any): string[] {
+  if (Array.isArray(raw.tags)) {
+    return raw.tags.filter((tag) => typeof tag === "string" && tag.trim().length > 0).map((tag) => tag.trim())
+  }
+
+  if (Array.isArray(raw.tagList)) {
+    return raw.tagList.filter((tag) => typeof tag === "string" && tag.trim().length > 0).map((tag) => tag.trim())
+  }
+
+  if (typeof raw.tags === "string") {
+    return raw.tags
+      .split(",")
+      .map((tag: string) => tag.trim())
+      .filter((tag: string) => tag.length > 0)
+  }
+
+  return []
 }
 
