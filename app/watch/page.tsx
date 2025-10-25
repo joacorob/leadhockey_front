@@ -60,7 +60,7 @@ function mapToContentType(type?: string) {
 
 export default function WatchPage() {
   const searchParams = useSearchParams()
-  const categoryParam = searchParams.get("category")
+  const categoryParam = searchParams.get("category") ?? searchParams.get("category_id")
 
   const [searchTerm, setSearchTerm] = useState("")
   const [displayItems, setDisplayItems] = useState<WatchContent[]>([])
@@ -217,6 +217,7 @@ export default function WatchPage() {
   const totalItems = watchData?.totalItems ?? mappedItems.length
   const hasNext = page < totalPages
   const hasPrev = page > 1
+  const isContentLoading = watchLoading || !selectedCategoryId
 
   const handleCategoryClick = (categoryId: string) => {
     if (categoryId === selectedCategoryId) return
@@ -503,7 +504,7 @@ export default function WatchPage() {
                 </div>
               )}
 
-              {watchLoading ? (
+              {isContentLoading ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                   {Array.from({ length: 8 }).map((_, i) => (
                     <div key={i} className="bg-white rounded-lg overflow-hidden shadow-sm">
