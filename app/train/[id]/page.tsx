@@ -33,11 +33,17 @@ export default function TrainingSessionPage() {
         const mappedItems = (rawPlan.items || []).map((it: any) => ({
           ...it,
           title: it.title || it.element?.title,
-          thumbnail_url: it.thumbnail_url || it.element?.thumbnail,
+          // DRILL uses thumbnail_url, VIDEO_SESSION uses thumbnail
+          thumbnail_url: it.itemType === 'DRILL' 
+            ? (it.element?.thumbnail_url || it.thumbnail_url)
+            : (it.element?.thumbnail || it.thumbnail_url),
           videoUrl: it.element?.videoUrl,
           videoProcessedUrl: it.element?.videoProcessedUrl,
           subtitles: it.element?.subtitles ?? [],
           pdfs: it.element?.pdfs ?? [],
+          description: it.element?.description,
+          filters: it.element?.filters ?? [],
+          tags: it.element?.tags ?? [],
         }))
 
         const planData = { ...rawPlan, items: mappedItems }

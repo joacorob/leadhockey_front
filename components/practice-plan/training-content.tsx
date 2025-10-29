@@ -1,6 +1,7 @@
 import { PracticePlanItem } from "@/lib/types/practice-plan"
-import { Play } from "lucide-react"
+import { Play, Tag } from "lucide-react"
 import { VideoPlayer } from "@/components/video/video-player"
+import { Badge } from "@/components/ui/badge"
 
 interface TrainingContentProps {
   item: PracticePlanItem
@@ -11,6 +12,7 @@ export function TrainingContent({ item, planTitle }: TrainingContentProps) {
   const thumbnail = item.thumbnail_url || "/placeholder.svg"
 
   const isVideo = item.itemType === "VIDEO_SESSION"
+  const isDrill = item.itemType === "DRILL"
 
   // Prepare subtitles for VideoPlayer
   const subtitles = (item as any).subtitles?.map((s: any) => ({
@@ -20,10 +22,20 @@ export function TrainingContent({ item, planTitle }: TrainingContentProps) {
     format: s.url.endsWith(".srt") ? "srt" : "vtt",
   })) ?? []
 
+  // Get description, filters, and tags from the item
+  const description = (item as any).description
+  const filters = (item as any).filters || []
+  const tags = (item as any).tags || []
+
+  // Format thumbnail URL for drills
+  const drillThumbnailSrc = isDrill && thumbnail
+    ? thumbnail.startsWith('http') ? thumbnail : `data:image/png;base64,${thumbnail}`
+    : thumbnail
+
   return (
     <div className="bg-white rounded-lg shadow-sm overflow-hidden">
       {/* Main canvas/thumbnail area */}
-      <div className="relative bg-gradient-to-br from-blue-900 to-blue-700 aspect-video">
+      <div className={`relative aspect-video ${isDrill ? 'bg-gray-50' : 'bg-gradient-to-br from-blue-900 to-blue-700'}`}>
         {isVideo ? (
           <VideoPlayer
             key={`video-${item.itemId}-${item.itemType}`} // Force re-render when video changes
@@ -35,7 +47,18 @@ export function TrainingContent({ item, planTitle }: TrainingContentProps) {
             contentType={item.itemType as "VIDEO_SESSION" | "DRILL"}
             enableProgressTracking={true}
           />
+        ) : isDrill ? (
+          // Drill thumbnail - show as static image without play button
+          <img
+            src={drillThumbnailSrc}
+            alt={item.title || "Drill"}
+            className="w-full h-full object-contain"
+            onError={(e) => {
+              (e.target as HTMLImageElement).src = "/placeholder.svg"
+            }}
+          />
         ) : (
+          // Other content types with play button overlay
           <>
             <img
               src={thumbnail}
@@ -90,12 +113,45 @@ export function TrainingContent({ item, planTitle }: TrainingContentProps) {
           </div>
         </div>
 
-        {/* Description placeholder paragraphs */}
-        <div className="prose max-w-none text-gray-800 mb-8">
-          <p>{/* TODO dynamic description */}In this exercise, two teams compete on adjacent pitches, with one team having five attackers against three defenders...</p>
-          <p>The attacking team aims to keep possession and score by passing while the defenders aim to win the ball...</p>
-          <p>The difficulty level can be adjusted by modifying pitch size, the number of defenders...</p>
-        </div>
+        {/* Description */}
+        {description && (
+          <div className="prose max-w-none text-gray-800 mb-8">
+            <p className="whitespace-pre-wrap">{description}</p>
+          </div>
+        )}
+
+        {/* Filters and Tags */}
+        {(filters.length > 0 || tags.length > 0) && (
+          <div className="mb-8 space-y-4">
+            {filters.length > 0 && (
+              <div>
+                <h3 className="text-sm font-semibold text-gray-700 mb-2 uppercase tracking-wide">Filters</h3>
+                <div className="flex flex-wrap gap-2">
+                  {filters.map((filter: any, index: number) => (
+                    <Badge key={index} variant="secondary" className="text-xs">
+                      {filter.name || filter}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+            {tags.length > 0 && (
+              <div>
+                <h3 className="text-sm font-semibold text-gray-700 mb-2 uppercase tracking-wide flex items-center gap-2">
+                  <Tag className="w-4 h-4" />
+                  Tags
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {tags.map((tag: any, index: number) => (
+                    <Badge key={index} variant="outline" className="text-xs">
+                      {tag.name || tag}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Downloads */}
         {isVideo && (item as any).pdfs && (item as any).pdfs.length > 0 && (

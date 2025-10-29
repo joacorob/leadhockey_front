@@ -22,6 +22,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     })
 
     const data = await backendRes.json()
+    console.log("practice-plans proxy GET data", JSON.stringify(data, null, 2))
     return NextResponse.json(data, { status: backendRes.status })
   } catch (e) {
     console.error("practice-plans proxy GET error", e)
