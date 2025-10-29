@@ -14,6 +14,11 @@ export function TrainingContent({ item, planTitle }: TrainingContentProps) {
   const isVideo = item.itemType === "VIDEO_SESSION"
   const isDrill = item.itemType === "DRILL"
 
+  // Check if drill has animation video ready
+  const drillAnimationVideoUrl = (item as any).animationVideoUrl
+  const drillAnimationVideoStatus = (item as any).animationVideoStatus
+  const hasDrillVideo = isDrill && drillAnimationVideoStatus === "success" && drillAnimationVideoUrl
+
   // Prepare subtitles for VideoPlayer
   const subtitles = (item as any).subtitles?.map((s: any) => ({
     url: s.url,
@@ -35,7 +40,7 @@ export function TrainingContent({ item, planTitle }: TrainingContentProps) {
   return (
     <div className="bg-white rounded-lg shadow-sm overflow-hidden">
       {/* Main canvas/thumbnail area */}
-      <div className={`relative aspect-video ${isDrill ? 'bg-gray-50' : 'bg-gradient-to-br from-blue-900 to-blue-700'}`}>
+      <div className={`relative aspect-video ${isDrill && !hasDrillVideo ? 'bg-gray-50' : 'bg-black'}`}>
         {isVideo ? (
           <VideoPlayer
             key={`video-${item.itemId}-${item.itemType}`} // Force re-render when video changes
@@ -46,6 +51,17 @@ export function TrainingContent({ item, planTitle }: TrainingContentProps) {
             contentId={String(item.itemId)}
             contentType={item.itemType as "VIDEO_SESSION" | "DRILL"}
             enableProgressTracking={true}
+          />
+        ) : hasDrillVideo ? (
+          // Drill with animation video - use VideoPlayer for consistency
+          <VideoPlayer
+            key={`drill-video-${item.itemId}`}
+            videoUrl={drillAnimationVideoUrl}
+            poster={drillThumbnailSrc}
+            fluid
+            contentId={String(item.itemId)}
+            contentType="DRILL"
+            enableProgressTracking={false}
           />
         ) : isDrill ? (
           // Drill thumbnail - show as static image without play button
@@ -116,7 +132,8 @@ export function TrainingContent({ item, planTitle }: TrainingContentProps) {
         {/* Description */}
         {description && (
           <div className="prose max-w-none text-gray-800 mb-8">
-            <p className="whitespace-pre-wrap">{description}</p>
+            {/* has to accept html */}
+            <p className="whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: description }} />
           </div>
         )}
 

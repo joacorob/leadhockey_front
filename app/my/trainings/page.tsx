@@ -7,7 +7,7 @@ import { Header } from "@/components/layout/header"
 import { TrainingCard } from "@/components/practice-plan/training-card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Search, Loader2 } from "lucide-react"
+import { Search, Loader2, Filter as FilterIcon } from "lucide-react"
 import {
   Select,
   SelectContent,
@@ -15,6 +15,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
 import { useApi } from "@/lib/hooks/use-api"
 import { useToast } from "@/hooks/use-toast"
@@ -29,6 +31,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { useRouter } from "next/navigation"
+import { Filter as VideoFilter } from "@/lib/types/api"
 
 interface PracticePlanSummary {
   practicePlanId: number
@@ -64,8 +67,30 @@ export default function MyTrainingsPage() {
   const [isDeleting, setIsDeleting] = useState(false)
   const [isCloning, setIsCloning] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
+  
+  // Filter state
+  const [filters, setFilters] = useState<VideoFilter[]>([])
+  const [activeFilters, setActiveFilters] = useState<Record<string, string | string[]>>({})
+  const [filterOptionIds, setFilterOptionIds] = useState<string[]>([])
+  const [showFilters, setShowFilters] = useState(false)
 
-  const { data: trainingsResponse, loading: trainingsLoading } = useApi<ApiResponse>(`/me/practice-sessions?refresh=${refreshKey}&status=${statusFilter}`)
+  // Load filters for drill category
+  const DEFAULT_DRILL_CATEGORY_ID = process.env.NEXT_PUBLIC_DEFAULT_DRILL_CATEGORY_ID || "2"
+  const { data: filtersResponse, loading: filtersLoading } = useApi<{ success: boolean; data: any }>(
+    "/filters",
+    { categoryId: DEFAULT_DRILL_CATEGORY_ID },
+  )
+
+  // Build API params with filters
+  const apiParams = useMemo(() => {
+    const params: Record<string, any> = { refresh: refreshKey, status: statusFilter }
+    if (filterOptionIds.length > 0) {
+      params.filterOptionIds = filterOptionIds.join(',')
+    }
+    return params
+  }, [refreshKey, statusFilter, filterOptionIds])
+
+  const { data: trainingsResponse, loading: trainingsLoading } = useApi<ApiResponse>(`/me/practice-sessions`, apiParams)
   const { toast } = useToast()
   const router = useRouter()
 
@@ -89,6 +114,45 @@ export default function MyTrainingsPage() {
     }))
   }, [trainingsResponse])
 
+  // Process filters from backend
+  useEffect(() => {
+    if (filtersResponse && (filtersResponse as any).success) {
+      const data = (filtersResponse as any).data
+      const list = Array.isArray(data?.data)
+        ? data.data
+        : Array.isArray(data)
+        ? data
+        : []
+      setFilters(list as VideoFilter[])
+    }
+  }, [filtersResponse])
+
+  // Update filterOptionIds when activeFilters change
+  useEffect(() => {
+    const optionIds: string[] = []
+
+    Object.values(activeFilters).forEach((value) => {
+      if (Array.isArray(value)) {
+        value.forEach((id) => {
+          if (id !== null && id !== undefined && id !== "") {
+            optionIds.push(String(id))
+          }
+        })
+      } else if (value !== null && value !== undefined && value !== "") {
+        optionIds.push(String(value))
+      }
+    })
+
+    const sorted = Array.from(new Set(optionIds)).sort()
+
+    setFilterOptionIds((prev) => {
+      if (prev.length === sorted.length && prev.every((id, index) => id === sorted[index])) {
+        return prev
+      }
+      return sorted
+    })
+  }, [activeFilters])
+
   useEffect(() => {
     filterTrainings(searchTerm)
   }, [trainings, searchTerm, statusFilter])
@@ -110,6 +174,95 @@ export default function MyTrainingsPage() {
   const handleSearch = (term: string) => {
     setSearchTerm(term)
   }
+
+  const handleFilterChange = (code: string, optionId: string, checked?: boolean) => {
+    const id = String(optionId)
+
+    setActiveFilters((prev) => {
+      const filterDef = filters.find((filter) => filter.code === code)
+      if (!filterDef) return prev
+
+      if (filterDef.ui_type === "checkbox") {
+        const current = Array.isArray(prev[code]) ? [...prev[code]] : []
+        const exists = current.includes(id)
+
+        if (checked) {
+          if (exists) return prev
+          return { ...prev, [code]: [...current, id] }
+        }
+
+        if (!exists) return prev
+        const next = current.filter((value) => value !== id)
+        if (next.length === 0) {
+          const { [code]: _removed, ...rest } = prev
+          return rest
+        }
+
+        return { ...prev, [code]: next }
+      }
+
+      if (!id) {
+        if (prev[code] === undefined) return prev
+        const { [code]: _removed, ...rest } = prev
+        return rest
+      }
+
+      if (prev[code] === id) return prev
+      return { ...prev, [code]: id }
+    })
+  }
+
+  const handleRemoveFilterChip = (code: string, optionId: string) => {
+    const id = String(optionId)
+
+    setActiveFilters((prev) => {
+      const current = prev[code]
+      if (!current) return prev
+
+      if (Array.isArray(current)) {
+        const next = current.filter((value) => value !== id)
+        if (next.length === 0) {
+          const { [code]: _removed, ...rest } = prev
+          return rest
+        }
+        return { ...prev, [code]: next }
+      }
+
+      if (current !== id) return prev
+      const { [code]: _removed, ...rest } = prev
+      return rest
+    })
+  }
+
+  const handleClearFilters = () => {
+    setSearchTerm("")
+    setActiveFilters({})
+    setFilterOptionIds([])
+  }
+
+  const selectedFilterChips = useMemo(() => {
+    const chips: Array<{ code: string; optionId: string; label: string }> = []
+
+    filters.forEach((filter) => {
+      const value = activeFilters[filter.code]
+      if (!value) return
+
+      const appendChip = (optionId: string) => {
+        const option = filter.options.find((opt) => String(opt.id) === String(optionId))
+        if (option) {
+          chips.push({ code: filter.code, optionId: String(option.id), label: `${filter.label}: ${option.label}` })
+        }
+      }
+
+      if (Array.isArray(value)) {
+        value.forEach((optionId) => appendChip(String(optionId)))
+      } else {
+        appendChip(String(value))
+      }
+    })
+
+    return chips
+  }, [filters, activeFilters])
 
   const handleClone = async (planId: number) => {
     if (isCloning) return
@@ -250,7 +403,100 @@ export default function MyTrainingsPage() {
                       </SelectContent>
                     </Select>
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowFilters((prev) => !prev)}
+                    className="flex items-center justify-center w-10 h-10 border border-input rounded-md hover:bg-accent"
+                  >
+                    <FilterIcon className="w-4 h-4" />
+                  </button>
                 </div>
+
+                {/* Dynamic Filters */}
+                {showFilters && (
+                  filtersLoading ? (
+                    <p className="text-sm text-gray-500 mb-4">Loading filters...</p>
+                  ) : filters.length > 0 ? (
+                    <div className="flex flex-wrap gap-4 mb-4">
+                      {filters.map((filter) => {
+                        const options = [...filter.options].sort((a, b) => a.ordering - b.ordering)
+                        return (
+                          <div key={filter.id} className="flex flex-col w-48 shrink-0">
+                            <label className="block text-sm font-medium mb-2">{filter.label}</label>
+                            {filter.ui_type === "select" && (
+                              <Select
+                                value={(activeFilters[filter.code] as string) || "__all__"}
+                                onValueChange={(val) => handleFilterChange(filter.code, val === "__all__" ? "" : val)}
+                              >
+                                <SelectTrigger className="w-full">
+                                  <SelectValue placeholder={`Select ${filter.label}`} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="__all__">All</SelectItem>
+                                  {options.map((opt) => (
+                                    <SelectItem key={opt.id} value={String(opt.id)}>
+                                      {opt.label}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            )}
+
+                            {filter.ui_type === "checkbox" && (
+                              <div className="flex flex-wrap gap-2">
+                                {options.map((opt) => {
+                                  const optionId = String(opt.id)
+                                  const checked = Array.isArray(activeFilters[filter.code])
+                                    ? (activeFilters[filter.code] as string[]).includes(optionId)
+                                    : false
+                                  return (
+                                    <label key={opt.id} className="flex items-center gap-1 text-sm">
+                                      <Checkbox
+                                        checked={checked}
+                                        onCheckedChange={(checkedValue) =>
+                                          handleFilterChange(filter.code, optionId, Boolean(checkedValue))
+                                        }
+                                      />
+                                      {opt.label}
+                                    </label>
+                                  )
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  ) : null
+                )}
+
+                {/* Active filter chips */}
+                {(searchTerm.trim().length > 0 || selectedFilterChips.length > 0) && (
+                  <div className="flex flex-wrap items-center gap-2 mb-4">
+                    {searchTerm.trim().length > 0 && (
+                      <Badge variant="secondary" className="flex items-center gap-1">
+                        Search: {searchTerm.trim()}
+                        <button
+                          onClick={() => setSearchTerm("")}
+                          className="ml-1 hover:bg-gray-200 rounded-full p-0.5"
+                        >
+                          ×
+                        </button>
+                      </Badge>
+                    )}
+                    {selectedFilterChips.map((chip) => (
+                      <Badge key={`${chip.code}-${chip.optionId}`} variant="secondary" className="flex items-center gap-1">
+                        {chip.label}
+                        <button
+                          onClick={() => handleRemoveFilterChip(chip.code, chip.optionId)}
+                          className="ml-1 hover:bg-gray-200 rounded-full p-0.5"
+                        >
+                          ×
+                        </button>
+                      </Badge>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {trainingsLoading ? (

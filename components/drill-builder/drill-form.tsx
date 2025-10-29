@@ -51,44 +51,11 @@ export function DrillForm({ data, onChange }: DrillFormProps) {
 
   // Track selections per filter.code; store option ids to align with backend expectation
   const [activeSelections, setActiveSelections] = useState<Record<string, string | string[] | number | null>>({})
-  const hasInitialized = useRef(false)
 
-  // Initialize activeSelections from existing filterOptionIds when filters load (only once)
+  // Whenever active selections change, compute filterOptionIds and propagate to parent state
   useEffect(() => {
-    if (!filters.length || !data.filterOptionIds?.length || hasInitialized.current) return
+    if (filters.length === 0) return
     
-    const initialSelections: Record<string, string | string[] | number | null> = {}
-    
-    filters.forEach((filter) => {
-      const existingIds = data.filterOptionIds || []
-      
-      if (filter.ui_type === "select") {
-        // Find the option that matches an existing ID
-        const matchingOption = filter.options.find(opt => existingIds.includes(String(opt.id)))
-        if (matchingOption) {
-          initialSelections[filter.code] = String(matchingOption.id)
-        }
-      } else if (filter.ui_type === "checkbox") {
-        // Find all options that match existing IDs
-        const matchingIds = filter.options
-          .filter(opt => existingIds.includes(String(opt.id)))
-          .map(opt => String(opt.id))
-        if (matchingIds.length > 0) {
-          initialSelections[filter.code] = matchingIds
-        }
-      }
-      // Note: number inputs don't map to predefined option IDs, so we skip them
-    })
-    
-    setActiveSelections(initialSelections)
-    hasInitialized.current = true
-  }, [filters, data.filterOptionIds])
-
-  useEffect(() => {
-    // Skip if we haven't initialized yet to avoid infinite loop
-    if (!hasInitialized.current) return
-    
-    // Whenever active selections change, compute filterOptionIds and propagate to parent state
     const optionIds: Array<number | string> = []
     filters.forEach((f) => {
       const val = activeSelections[f.code]
@@ -103,9 +70,20 @@ export function DrillForm({ data, onChange }: DrillFormProps) {
         // number inputs typically don't map to predefined option IDs; skip adding to filterOptionIds
       }
     })
-    onChange({ ...data, filterOptionIds: optionIds })
+    
+    // Only update if the filterOptionIds have actually changed
+    const currentIds = data.filterOptionIds || []
+    const idsAsStrings = optionIds.map(String).sort()
+    const currentAsStrings = currentIds.map(String).sort()
+    const hasChanged = idsAsStrings.length !== currentAsStrings.length || 
+                       idsAsStrings.some((id, idx) => id !== currentAsStrings[idx])
+    
+    if (hasChanged) {
+      console.log('[DrillForm] Updating filterOptionIds:', optionIds)
+      onChange({ ...data, filterOptionIds: optionIds })
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeSelections, filters])
+  }, [activeSelections, filters.length])
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6 items-start">

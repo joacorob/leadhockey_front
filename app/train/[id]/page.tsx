@@ -44,6 +44,9 @@ export default function TrainingSessionPage() {
           description: it.element?.description,
           filters: it.element?.filters ?? [],
           tags: it.element?.tags ?? [],
+          // Drill animation video
+          animationVideoUrl: it.element?.animationVideoUrl,
+          animationVideoStatus: it.element?.animationVideoStatus,
         }))
 
         const planData = { ...rawPlan, items: mappedItems }
