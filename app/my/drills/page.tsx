@@ -164,16 +164,21 @@ export default function MyDrillsPage() {
         description: "Drill deleted successfully. It has been removed from all practice plans.",
       })
 
-      // Refresh the list
-      setRefreshKey((prev) => prev + 1)
+      // Close dialog and reset state BEFORE refresh to avoid race conditions
       setDeleteDialogOpen(false)
       setSelectedDrillId(null)
+      
+      // Small delay to ensure dialog is fully closed before refresh
+      setTimeout(() => {
+        setRefreshKey((prev) => prev + 1)
+      }, 100)
     } catch (error: any) {
       toast({
         title: "Error",
         description: error.message || "Failed to delete drill",
         variant: "destructive",
       })
+      // Don't close dialog on error so user can try again
     } finally {
       setIsDeleting(false)
     }
@@ -410,8 +415,11 @@ export default function MyDrillsPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteConfirm}
+            <Button
+              onClick={(e) => {
+                e.preventDefault()
+                handleDeleteConfirm()
+              }}
               disabled={isDeleting}
               className="bg-red-600 hover:bg-red-700"
             >
@@ -423,7 +431,7 @@ export default function MyDrillsPage() {
               ) : (
                 "Delete"
               )}
-            </AlertDialogAction>
+            </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
