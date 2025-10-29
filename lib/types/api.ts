@@ -127,3 +127,17 @@ export interface Filter {
   ui_type: "select" | "checkbox" | "number"
   options: FilterOption[]
 }
+
+// Category types
+export interface Category {
+  id: number | string
+  name: string
+  description?: string
+  color?: string
+  icon?: string
+  imageSrc?: string
+  image?: string
+  parentId?: number | null
+  hasChildren?: boolean
+  childCount?: number
+}

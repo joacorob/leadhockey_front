@@ -27,7 +27,21 @@ export async function GET(request: NextRequest) {
       })
 
       const externalData = await externalResponse.json()
-      // console.log(externalData, 'externalData')
+      
+      // Enrich categories with hasChildren flag if not present
+      // Backend should provide this, but we can compute it as fallback
+      if (externalData?.data?.items && Array.isArray(externalData.data.items)) {
+        const items = externalData.data.items.map((category: any) => ({
+          ...category,
+          // Backend should provide hasChildren, but fallback to checking childCount
+          hasChildren: category.hasChildren ?? (category.childCount > 0),
+        }))
+        return NextResponse.json({ 
+          success: true, 
+          data: { ...externalData, data: { ...externalData.data, items } }
+        })
+      }
+      
       return NextResponse.json({ success: true, data: externalData })
       
     } catch (externalError: any) {

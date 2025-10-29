@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useMemo, useCallback, Suspense } from "react"
-import { useSearchParams } from "next/navigation"
+import { useSearchParams, useRouter } from "next/navigation"
 import { Sidebar } from "@/components/layout/sidebar"
 import { Header } from "@/components/layout/header"
 import { VideoCard } from "@/components/ui/video-card"
@@ -11,20 +11,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { PaginationComponent } from "@/components/ui/pagination"
-import { Search, Filter as FilterIcon } from "lucide-react"
+import { Search, Filter as FilterIcon, ChevronLeft } from "lucide-react"
 import { useApi } from "@/lib/hooks/use-api"
-import { Filter as VideoFilter } from "@/lib/types/api"
+import { Category, Filter as VideoFilter } from "@/lib/types/api"
 import { WatchContent, mapContentItem } from "@/lib/types/watch"
-
-interface Category {
-  id: string
-  name: string
-  color: string
-  icon: string
-  imageSrc?: string
-  description?: string
-  image?: string
-}
 
 interface ApiResponse<T> {
   success: boolean
@@ -60,6 +50,7 @@ function mapToContentType(type?: string) {
 
 export default function WatchPage() {
   const searchParams = useSearchParams()
+  const router = useRouter()
   const categoryParam = searchParams.get("category") ?? searchParams.get("category_id")
 
   const [searchTerm, setSearchTerm] = useState("")
@@ -69,6 +60,7 @@ export default function WatchPage() {
   const [filterOptionIds, setFilterOptionIds] = useState<string[]>([])
   const [showFilters, setShowFilters] = useState(false)
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null)
+  const [categoryTrail, setCategoryTrail] = useState<Category[]>([]) // Breadcrumb trail
   const [page, setPage] = useState(1)
 
   const { data: categoriesResponse, loading: categoriesLoading } = useApi<ApiResponse<Category[]>>("/categories")
@@ -98,6 +90,25 @@ export default function WatchPage() {
     return raw.map((category: any) => ({ ...category, id: String(category.id) }))
   }, [subCategoriesResponse])
 
+  // Determine if current category is a leaf (has no children)
+  const currentCategory = useMemo(() => {
+    return [...categories, ...subCategories].find(c => String(c.id) === selectedCategoryId)
+  }, [categories, subCategories, selectedCategoryId])
+
+  const isLeafCategory = useMemo(() => {
+    // If we're still loading subcategories, we don't know yet
+    if (subCategoriesLoading) return false
+    
+    // If we have subcategories, it's not a leaf
+    if (subCategories.length > 0) return false
+    
+    // If the category explicitly says hasChildren, it's not a leaf
+    if (currentCategory?.hasChildren) return false
+    
+    // If we have a selected category and no subcategories loaded, it's a leaf
+    return !!selectedCategoryId
+  }, [selectedCategoryId, subCategories, subCategoriesLoading, currentCategory])
+
   // Categories to display: subcategories if available, otherwise main categories
   const displayCategories = useMemo<Category[]>(() => {
     if (subCategories.length > 0) {
@@ -112,13 +123,23 @@ export default function WatchPage() {
     if (categoryParam) {
       const match = categories.find((category) => String(category.id) === String(categoryParam))
       if (match) {
-        setSelectedCategoryId((prev) => (prev === String(match.id) ? prev : String(match.id)))
+        const newId = String(match.id)
+        setSelectedCategoryId((prev) => {
+          if (prev === newId) return prev
+          
+          // Initialize trail with the category from URL
+          setCategoryTrail([match])
+          return newId
+        })
         return
       }
     }
 
-    setSelectedCategoryId((prev) => prev ?? String(categories[0].id))
-  }, [categories, categoryParam])
+    // Default to first category if no param
+    if (!selectedCategoryId && categories.length > 0) {
+      setSelectedCategoryId(String(categories[0].id))
+    }
+  }, [categories, categoryParam, selectedCategoryId])
 
   useEffect(() => {
     setActiveFilters({})
@@ -129,11 +150,12 @@ export default function WatchPage() {
   }, [selectedCategoryId])
 
   const filtersParams = useMemo(() => {
-    if (!selectedCategoryId) {
+    // Only fetch filters when we're at a leaf category
+    if (!selectedCategoryId || !isLeafCategory) {
       return { __skip: true }
     }
     return { categoryId: selectedCategoryId }
-  }, [selectedCategoryId])
+  }, [selectedCategoryId, isLeafCategory])
 
   const { data: filtersResponse, loading: filtersLoading } = useApi<{ success: boolean; data: any }>("/filters", filtersParams)
 
@@ -175,7 +197,8 @@ export default function WatchPage() {
   }, [activeFilters])
 
   const watchParams = useMemo(() => {
-    if (!selectedCategoryId) {
+    // Only fetch watch content when we're at a leaf category
+    if (!selectedCategoryId || !isLeafCategory) {
       return { __skip: true }
     }
 
@@ -194,7 +217,7 @@ export default function WatchPage() {
     }
 
     return params
-  }, [selectedCategoryId, page, filterOptionIds, searchTerm])
+  }, [selectedCategoryId, isLeafCategory, page, filterOptionIds, searchTerm])
 
   const {
     data: watchResponse,
@@ -248,7 +271,45 @@ export default function WatchPage() {
 
   const handleCategoryClick = (categoryId: string) => {
     if (categoryId === selectedCategoryId) return
+    
+    // Update the URL
+    router.push(`/watch?category=${categoryId}`)
+    
+    // Find the clicked category and add it to trail
+    const clickedCategory = displayCategories.find(c => String(c.id) === categoryId)
+    if (clickedCategory) {
+      setCategoryTrail(prev => {
+        // Check if this category is already in the trail (going back)
+        const existingIndex = prev.findIndex(c => String(c.id) === categoryId)
+        if (existingIndex >= 0) {
+          // Going back - keep only up to this category
+          return prev.slice(0, existingIndex + 1)
+        }
+        // Moving forward - add to trail
+        return [...prev, clickedCategory]
+      })
+    }
+    
     setSelectedCategoryId(categoryId)
+  }
+
+  const handleBreadcrumbClick = (categoryId: string | null) => {
+    if (categoryId === null) {
+      // Go back to root
+      router.push('/watch')
+      setSelectedCategoryId(null)
+      setCategoryTrail([])
+    } else {
+      // Go back to specific category in trail
+      router.push(`/watch?category=${categoryId}`)
+      setSelectedCategoryId(categoryId)
+      
+      // Update trail to only include categories up to this point
+      const index = categoryTrail.findIndex(c => String(c.id) === categoryId)
+      if (index >= 0) {
+        setCategoryTrail(categoryTrail.slice(0, index + 1))
+      }
+    }
   }
 
   const handleFilterChange = (code: string, optionId: string, checked?: boolean) => {
@@ -373,207 +434,271 @@ export default function WatchPage() {
           >
             <div className="max-w-7xl mx-auto">
               <div className="mb-6">
-                <h1 className="text-2xl font-bold text-gray-900 mb-6">Watch Content</h1>
-
-                <div className="mb-8">
-                  <h2 className="text-lg font-semibold text-gray-800 mb-4">Browse by Category</h2>
-                  {categoriesLoading || subCategoriesLoading ? (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-                      {Array.from({ length: 6 }).map((_, i) => (
-                        <div key={i} className="h-24 sm:h-28 bg-gray-200 rounded-lg animate-pulse" />
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-4">
+                    <h1 className="text-2xl font-bold text-gray-900">Watch Content</h1>
+                    
+                    {/* Back button - show when we have a trail */}
+                    {categoryTrail.length > 0 && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          if (categoryTrail.length === 1) {
+                            // Go back to root
+                            handleBreadcrumbClick(null)
+                          } else {
+                            // Go back to previous category in trail
+                            const prevCategory = categoryTrail[categoryTrail.length - 2]
+                            handleBreadcrumbClick(String(prevCategory.id))
+                          }
+                        }}
+                        className="flex items-center gap-2"
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                        Back
+                      </Button>
+                    )}
+                  </div>
+                  
+                  {/* Breadcrumb navigation */}
+                  {categoryTrail.length > 0 && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <button
+                        onClick={() => handleBreadcrumbClick(null)}
+                        className="text-blue-600 hover:text-blue-800 hover:underline"
+                      >
+                        All Categories
+                      </button>
+                      {categoryTrail.map((cat, idx) => (
+                        <div key={cat.id} className="flex items-center gap-2">
+                          <span className="text-gray-400">/</span>
+                          {idx === categoryTrail.length - 1 ? (
+                            <span className="text-gray-900 font-medium">{cat.name}</span>
+                          ) : (
+                            <button
+                              onClick={() => handleBreadcrumbClick(String(cat.id))}
+                              className="text-blue-600 hover:text-blue-800 hover:underline"
+                            >
+                              {cat.name}
+                            </button>
+                          )}
+                        </div>
                       ))}
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-                      {displayCategories.map((category) => {
-                        const isActive = selectedCategoryId === String(category.id)
-                        return (
-                          <div
-                            key={category.id}
-                            onClick={() => handleCategoryClick(String(category.id))}
-                            className={`group cursor-pointer rounded-lg overflow-hidden transition-all duration-200 hover:shadow-lg hover:scale-105 ${
-                              isActive ? "ring-2 ring-blue-500 shadow-lg" : "hover:shadow-md"
-                            }`}
-                          >
-                            <div className="relative">
-                              <img
-                                src={category.imageSrc || category.image || "/placeholder.svg"}
-                                alt={category.name}
-                                className="w-full h-24 sm:h-28 object-cover group-hover:brightness-110 transition-all duration-200"
-                              />
-                              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                              <div className="absolute bottom-0 left-0 right-0 p-2">
-                                <h3 className="text-white text-xs sm:text-sm font-semibold text-center leading-tight">
-                                  {category.name}
-                                </h3>
-                              </div>
-                            </div>
-                          </div>
-                        )
-                      })}
                     </div>
                   )}
                 </div>
 
-                <div className="flex flex-col sm:flex-row gap-4 mb-6">
-                  <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <Input
-                      placeholder="Search content, coaches, or tags..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-10"
-                      disabled={!selectedCategoryId}
-                    />
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => setShowFilters((prev) => !prev)}
-                    className="flex items-center justify-center w-10 h-10 border border-input rounded-md hover:bg-accent"
-                    disabled={!selectedCategoryId}
-                  >
-                    <FilterIcon className="w-4 h-4" />
-                  </button>
-                </div>
-
-                {showFilters && selectedCategoryId && (
-                  filtersLoading ? (
-                    <p className="text-sm text-gray-500 mb-4">Loading filters...</p>
-                  ) : filters.length > 0 ? (
-                    <div className="flex flex-wrap gap-4 mb-4">
-                      {filters.map((filter) => {
-                        const options = [...filter.options].sort((a, b) => a.ordering - b.ordering)
-                        return (
-                          <div key={filter.id} className="flex flex-col w-48 shrink-0">
-                            <label className="block text-sm font-medium mb-2">{filter.label}</label>
-                            {filter.ui_type === "select" && (
-                              <Select
-                                value={(activeFilters[filter.code] as string) || ""}
-                                onValueChange={(val) => handleFilterChange(filter.code, val)}
-                              >
-                                <SelectTrigger className="w-full">
-                                  <SelectValue placeholder={`Select ${filter.label}`} />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="">All</SelectItem>
-                                  {options.map((opt) => (
-                                    <SelectItem key={opt.id} value={String(opt.id)}>
-                                      {opt.label}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            )}
-
-                            {filter.ui_type === "checkbox" && (
-                              <div className="flex flex-wrap gap-2">
-                                {options.map((opt) => {
-                                  const optionId = String(opt.id)
-                                  const checked = Array.isArray(activeFilters[filter.code])
-                                    ? (activeFilters[filter.code] as string[]).includes(optionId)
-                                    : false
-                                  return (
-                                    <label key={opt.id} className="flex items-center gap-1 text-sm">
-                                      <Checkbox
-                                        checked={checked}
-                                        onCheckedChange={(checkedValue) =>
-                                          handleFilterChange(filter.code, optionId, Boolean(checkedValue))
-                                        }
-                                      />
-                                      {opt.label}
-                                    </label>
-                                  )
-                                })}
+                {/* Only show category grid when NOT at leaf category */}
+                {!isLeafCategory && (
+                  <div className="mb-8">
+                    <h2 className="text-lg font-semibold text-gray-800 mb-4">Browse by Category</h2>
+                    {categoriesLoading || subCategoriesLoading ? (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+                        {Array.from({ length: 6 }).map((_, i) => (
+                          <div key={i} className="h-24 sm:h-28 bg-gray-200 rounded-lg animate-pulse" />
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+                        {displayCategories.map((category) => {
+                          const isActive = selectedCategoryId === String(category.id)
+                          return (
+                            <div
+                              key={category.id}
+                              onClick={() => handleCategoryClick(String(category.id))}
+                              className={`group cursor-pointer rounded-lg overflow-hidden transition-all duration-200 hover:shadow-lg hover:scale-105 ${
+                                isActive ? "ring-2 ring-blue-500 shadow-lg" : "hover:shadow-md"
+                              }`}
+                            >
+                              <div className="relative">
+                                <img
+                                  src={category.imageSrc || category.image || "/placeholder.svg"}
+                                  alt={category.name}
+                                  className="w-full h-24 sm:h-28 object-cover group-hover:brightness-110 transition-all duration-200"
+                                />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                                <div className="absolute bottom-0 left-0 right-0 p-2">
+                                  <h3 className="text-white text-xs sm:text-sm font-semibold text-center leading-tight">
+                                    {category.name}
+                                  </h3>
+                                </div>
                               </div>
-                            )}
-                          </div>
-                        )
-                      })}
-                    </div>
-                  ) : null
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
                 )}
 
-                {(searchTerm.trim().length > 0 || selectedFilterChips.length > 0) && (
-                  <div className="flex flex-wrap items-center gap-2 mb-4">
-                    {searchTerm.trim().length > 0 && (
-                      <Badge variant="secondary" className="flex items-center gap-1">
-                        Search: {searchTerm.trim()}
-                        <button
-                          onClick={() => setSearchTerm("")}
-                          className="ml-1 hover:bg-gray-200 rounded-full p-0.5"
-                        >
-                          ×
-                        </button>
-                      </Badge>
+                {/* Only show search and filters when at leaf category */}
+                {isLeafCategory && (
+                  <>
+                    <div className="flex flex-col sm:flex-row gap-4 mb-6">
+                      <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <Input
+                          placeholder="Search content, coaches, or tags..."
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                          className="pl-10"
+                        />
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => setShowFilters((prev) => !prev)}
+                        className="flex items-center justify-center w-10 h-10 border border-input rounded-md hover:bg-accent"
+                      >
+                        <FilterIcon className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    {showFilters && (
+                      filtersLoading ? (
+                        <p className="text-sm text-gray-500 mb-4">Loading filters...</p>
+                      ) : filters.length > 0 ? (
+                        <div className="flex flex-wrap gap-4 mb-4">
+                          {filters.map((filter) => {
+                            const options = [...filter.options].sort((a, b) => a.ordering - b.ordering)
+                            return (
+                              <div key={filter.id} className="flex flex-col w-48 shrink-0">
+                                <label className="block text-sm font-medium mb-2">{filter.label}</label>
+                                {filter.ui_type === "select" && (
+                                  <Select
+                                    value={(activeFilters[filter.code] as string) || ""}
+                                    onValueChange={(val) => handleFilterChange(filter.code, val)}
+                                  >
+                                    <SelectTrigger className="w-full">
+                                      <SelectValue placeholder={`Select ${filter.label}`} />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="">All</SelectItem>
+                                      {options.map((opt) => (
+                                        <SelectItem key={opt.id} value={String(opt.id)}>
+                                          {opt.label}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                )}
+
+                                {filter.ui_type === "checkbox" && (
+                                  <div className="flex flex-wrap gap-2">
+                                    {options.map((opt) => {
+                                      const optionId = String(opt.id)
+                                      const checked = Array.isArray(activeFilters[filter.code])
+                                        ? (activeFilters[filter.code] as string[]).includes(optionId)
+                                        : false
+                                      return (
+                                        <label key={opt.id} className="flex items-center gap-1 text-sm">
+                                          <Checkbox
+                                            checked={checked}
+                                            onCheckedChange={(checkedValue) =>
+                                              handleFilterChange(filter.code, optionId, Boolean(checkedValue))
+                                            }
+                                          />
+                                          {opt.label}
+                                        </label>
+                                      )
+                                    })}
+                                  </div>
+                                )}
+                              </div>
+                            )
+                          })}
+                        </div>
+                      ) : null
                     )}
-                    {selectedFilterChips.map((chip) => (
-                      <Badge key={`${chip.code}-${chip.optionId}`} variant="secondary" className="flex items-center gap-1">
-                        {chip.label}
-                        <button
-                          onClick={() => handleRemoveFilterChip(chip.code, chip.optionId)}
-                          className="ml-1 hover:bg-gray-200 rounded-full p-0.5"
-                        >
-                          ×
-                        </button>
-                      </Badge>
-                    ))}
-                  </div>
+
+                    {(searchTerm.trim().length > 0 || selectedFilterChips.length > 0) && (
+                      <div className="flex flex-wrap items-center gap-2 mb-4">
+                        {searchTerm.trim().length > 0 && (
+                          <Badge variant="secondary" className="flex items-center gap-1">
+                            Search: {searchTerm.trim()}
+                            <button
+                              onClick={() => setSearchTerm("")}
+                              className="ml-1 hover:bg-gray-200 rounded-full p-0.5"
+                            >
+                              ×
+                            </button>
+                          </Badge>
+                        )}
+                        {selectedFilterChips.map((chip) => (
+                          <Badge key={`${chip.code}-${chip.optionId}`} variant="secondary" className="flex items-center gap-1">
+                            {chip.label}
+                            <button
+                              onClick={() => handleRemoveFilterChip(chip.code, chip.optionId)}
+                              className="ml-1 hover:bg-gray-200 rounded-full p-0.5"
+                            >
+                              ×
+                            </button>
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
 
-              {watchError && (
-                <div className="mb-6 rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-                  <p className="mb-2">Failed to load watch content. {watchError}</p>
-                  <Button variant="outline" size="sm" onClick={refetchWatch}>
-                    Try again
-                  </Button>
-                </div>
-              )}
-
-              {isContentLoading ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                  {Array.from({ length: 8 }).map((_, i) => (
-                    <div key={i} className="bg-white rounded-lg overflow-hidden shadow-sm">
-                      <div className="aspect-video bg-gray-200 animate-pulse" />
-                      <div className="p-4 space-y-2">
-                        <div className="w-3/4 h-4 bg-gray-200 rounded animate-pulse" />
-                        <div className="w-1/2 h-3 bg-gray-200 rounded animate-pulse" />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
+              {/* Only show content when at leaf category */}
+              {isLeafCategory && (
                 <>
-                  <p className="text-sm text-gray-600 mb-4">
-                    Showing {displayItems.length} item{displayItems.length !== 1 ? "s" : ""} (total {totalItems})
-                  </p>
-
-                  {displayItems.length > 0 ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                      {displayItems.map((item) => (
-                        <VideoCard key={`${item.contentType}-${item.id}`} video={item} showActions={false} />
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-12">
-                      <p className="text-gray-500 mb-4">No content found matching your criteria</p>
-                      <Button onClick={handleClearFilters}>Reset search & filters</Button>
+                  {watchError && (
+                    <div className="mb-6 rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                      <p className="mb-2">Failed to load watch content. {watchError}</p>
+                      <Button variant="outline" size="sm" onClick={refetchWatch}>
+                        Try again
+                      </Button>
                     </div>
                   )}
 
-                  {totalPages > 1 && (
-                    <div className="mt-8 flex justify-center">
-                      <PaginationComponent
-                        currentPage={page}
-                        totalPages={totalPages}
-                        hasNext={hasNext}
-                        hasPrev={hasPrev}
-                        onPageChange={handlePageChange}
-                        onNext={handleNextPage}
-                        onPrev={handlePrevPage}
-                      />
+                  {watchLoading ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                      {Array.from({ length: 8 }).map((_, i) => (
+                        <div key={i} className="bg-white rounded-lg overflow-hidden shadow-sm">
+                          <div className="aspect-video bg-gray-200 animate-pulse" />
+                          <div className="p-4 space-y-2">
+                            <div className="w-3/4 h-4 bg-gray-200 rounded animate-pulse" />
+                            <div className="w-1/2 h-3 bg-gray-200 rounded animate-pulse" />
+                          </div>
+                        </div>
+                      ))}
                     </div>
+                  ) : (
+                    <>
+                      <p className="text-sm text-gray-600 mb-4">
+                        Showing {displayItems.length} item{displayItems.length !== 1 ? "s" : ""} (total {totalItems})
+                      </p>
+
+                      {displayItems.length > 0 ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                          {displayItems.map((item) => (
+                            <VideoCard key={`${item.contentType}-${item.id}`} video={item} showActions={false} />
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-center py-12">
+                          <p className="text-gray-500 mb-4">No content found matching your criteria</p>
+                          <Button onClick={handleClearFilters}>Reset search & filters</Button>
+                        </div>
+                      )}
+
+                      {totalPages > 1 && (
+                        <div className="mt-8 flex justify-center">
+                          <PaginationComponent
+                            currentPage={page}
+                            totalPages={totalPages}
+                            hasNext={hasNext}
+                            hasPrev={hasPrev}
+                            onPageChange={handlePageChange}
+                            onNext={handleNextPage}
+                            onPrev={handlePrevPage}
+                          />
+                        </div>
+                      )}
+                    </>
                   )}
                 </>
               )}
