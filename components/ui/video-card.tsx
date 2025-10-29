@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import Image from "next/image"
 import { Play, User, Clock, MoreVertical, Trash2, Edit } from 'lucide-react'
 import { Badge } from "@/components/ui/badge"
@@ -29,6 +30,12 @@ interface VideoCardProps {
 
 export function VideoCard({ video, onClick, onDelete, onEdit, showActions = true }: VideoCardProps) {
   const router = useRouter()
+  const [dropdownOpen, setDropdownOpen] = useState(false)
+
+  // Reset dropdown state when video changes (e.g., after deletion/refresh)
+  useEffect(() => {
+    setDropdownOpen(false)
+  }, [video.id])
 
   const handleClick = () => {
     if (onClick) {
@@ -63,7 +70,12 @@ export function VideoCard({ video, onClick, onDelete, onEdit, showActions = true
   const handleDelete = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    onDelete?.(video.id)
+    // Close dropdown first to avoid overlay conflicts
+    setDropdownOpen(false)
+    // Small delay to ensure dropdown is closed before opening dialog
+    setTimeout(() => {
+      onDelete?.(video.id)
+    }, 50)
   }
 
   const hasProgress = typeof video.progressPercent === "number"
@@ -121,7 +133,7 @@ export function VideoCard({ video, onClick, onDelete, onEdit, showActions = true
         {/* Actions menu */}
         {shouldShowActions && (
           <div className="absolute top-2 right-2 z-10">
-            <DropdownMenu>
+            <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="ghost"
@@ -135,7 +147,7 @@ export function VideoCard({ video, onClick, onDelete, onEdit, showActions = true
                   <MoreVertical className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
+              <DropdownMenuContent align="end" onCloseAutoFocus={(e) => e.preventDefault()}>
                 {(onEdit || video.contentType === "DRILL" || video.contentType === "PRACTICE_SESSION") && (
                   <DropdownMenuItem onClick={handleEdit}>
                     <Edit className="mr-2 h-4 w-4" />

@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { User, Clock, MoreVertical, Copy, Trash2, Edit } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
@@ -46,6 +47,12 @@ interface TrainingCardProps {
 
 export function TrainingCard({ plan, onClone, onDelete, onEdit }: TrainingCardProps) {
   const router = useRouter()
+  const [dropdownOpen, setDropdownOpen] = useState(false)
+  
+  // Reset dropdown state when plan changes (e.g., after deletion/refresh)
+  useEffect(() => {
+    setDropdownOpen(false)
+  }, [plan.id])
   
   // Calculate total duration from items
   const totalDuration = plan.items.reduce((acc, item) => {
@@ -134,7 +141,12 @@ export function TrainingCard({ plan, onClone, onDelete, onEdit }: TrainingCardPr
   const handleDelete = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    onDelete?.(plan.id)
+    // Close dropdown first to avoid overlay conflicts
+    setDropdownOpen(false)
+    // Small delay to ensure dropdown is closed before opening dialog
+    setTimeout(() => {
+      onDelete?.(plan.id)
+    }, 50)
   }
 
   return (
@@ -180,7 +192,7 @@ export function TrainingCard({ plan, onClone, onDelete, onEdit }: TrainingCardPr
       {/* Actions menu */}
       {(onClone || onDelete || onEdit) && (
         <div className="absolute top-2 right-2 z-10">
-          <DropdownMenu>
+          <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
             <DropdownMenuTrigger asChild>
               <Button
                 variant="ghost"
@@ -194,7 +206,7 @@ export function TrainingCard({ plan, onClone, onDelete, onEdit }: TrainingCardPr
                 <MoreVertical className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
+            <DropdownMenuContent align="end" onCloseAutoFocus={(e) => e.preventDefault()}>
               <DropdownMenuItem onClick={handleEdit}>
                 <Edit className="mr-2 h-4 w-4" />
                 Edit

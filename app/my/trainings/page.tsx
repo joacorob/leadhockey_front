@@ -593,7 +593,16 @@ export default function MyTrainingsPage() {
       </div>
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+      <AlertDialog 
+        open={deleteDialogOpen} 
+        onOpenChange={(open) => {
+          if (!open && !isDeleting) {
+            // Only allow closing if not currently deleting
+            setDeleteDialogOpen(false)
+            setSelectedPlanId(null)
+          }
+        }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Training Plan</AlertDialogTitle>

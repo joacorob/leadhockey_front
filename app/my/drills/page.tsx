@@ -405,7 +405,16 @@ export default function MyDrillsPage() {
       </div>
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+      <AlertDialog 
+        open={deleteDialogOpen} 
+        onOpenChange={(open) => {
+          if (!open && !isDeleting) {
+            // Only allow closing if not currently deleting
+            setDeleteDialogOpen(false)
+            setSelectedDrillId(null)
+          }
+        }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Drill</AlertDialogTitle>
