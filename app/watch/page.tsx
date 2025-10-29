@@ -567,14 +567,14 @@ export default function WatchPage() {
                                 <label className="block text-sm font-medium mb-2">{filter.label}</label>
                                 {filter.ui_type === "select" && (
                                   <Select
-                                    value={(activeFilters[filter.code] as string) || ""}
-                                    onValueChange={(val) => handleFilterChange(filter.code, val)}
+                                    value={(activeFilters[filter.code] as string) || "__all__"}
+                                    onValueChange={(val) => handleFilterChange(filter.code, val === "__all__" ? "" : val)}
                                   >
                                     <SelectTrigger className="w-full">
                                       <SelectValue placeholder={`Select ${filter.label}`} />
                                     </SelectTrigger>
                                     <SelectContent>
-                                      <SelectItem value="">All</SelectItem>
+                                      <SelectItem value="__all__">All</SelectItem>
                                       {options.map((opt) => (
                                         <SelectItem key={opt.id} value={String(opt.id)}>
                                           {opt.label}
